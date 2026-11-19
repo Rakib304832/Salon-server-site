@@ -1,0 +1,27 @@
+# Real environment files must never be pushed to GitHub.
+.env
+.env.*
+# Keep the example file so other developers know which variables are required.
+!.env.example
+
+# Installed dependencies are recreated with npm install.
+node_modules/
+
+# Compiled JavaScript is recreated with npm run build.
+dist/
+
+# Log files are generated at runtime and should not be committed.
+*.log
+npm-debug.log*
+
+# TypeScript incremental build cache.
+*.tsbuildinfo
+
+# Test coverage output.
+coverage/
+
+# Common editor and operating-system files.
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

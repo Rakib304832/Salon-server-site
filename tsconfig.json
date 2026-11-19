@@ -1,0 +1,52 @@
+{
+  // Compiler options tell TypeScript how to read, check, and build the source code.
+  "compilerOptions": {
+    // Target modern JavaScript that Node.js 20 and newer understand.
+    "target": "ES2022",
+
+    // Include the ES2023 library types so newer built-in methods are recognised.
+    "lib": ["ES2023"],
+
+    // Emit modern ES modules because package.json sets "type": "module".
+    "module": "NodeNext",
+
+    // Resolve imports the same way Node.js resolves ESM packages.
+    "moduleResolution": "NodeNext",
+
+    // Treat the src folder as the root of the source tree.
+    "rootDir": "./src",
+
+    // Write compiled JavaScript into the dist folder.
+    "outDir": "./dist",
+
+    // Load Node.js type definitions for process, console, and other server APIs.
+    "types": ["node"],
+
+    // Enable all strict type-checking rules for safer code.
+    "strict": true,
+
+    // Allow default imports from CommonJS packages such as Express.
+    "esModuleInterop": true,
+
+    // Make file-name casing consistent across Windows, macOS, and Linux.
+    "forceConsistentCasingInFileNames": true,
+
+    // Skip type checking inside third-party packages to keep builds fast.
+    "skipLibCheck": true,
+
+    // Create source maps so stack traces point back to the TypeScript files.
+    "sourceMap": true,
+
+    // Do not generate .d.ts declaration files because this is an application, not a library.
+    "declaration": false,
+
+    // Allow importing JSON files, which the service seed script will use later.
+    "resolveJsonModule": true
+  },
+
+  // Compile every TypeScript file inside src, including future subfolders.
+  "include": ["src/**/*.ts"],
+
+  // Never compile dependencies or previously compiled output.
+  "exclude": ["node_modules", "dist"]
+}
