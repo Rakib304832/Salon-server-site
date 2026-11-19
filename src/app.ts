@@ -1,13 +1,60 @@
 // Import the Express framework, which provides the HTTP server and routing tools.
 import express from "express";
 
+// Import CORS so the separately hosted Next.js client can call this API with cookies.
+import cors from "cors";
+
+// Import the official Better Auth adapter that converts Node requests into Better Auth requests.
+import { toNodeHandler } from "better-auth/node";
+
+// Import the validated client URL used by the CORS policy.
+import { env } from "./config/env.js";
+
 // Import the database-state helper used by the health route.
 import { isDbConnected } from "./config/db.js";
+
+// Import the initialised Better Auth instance accessor.
+import { getAuth } from "./config/auth.js";
 
 // Create the Express application instance that will receive every request.
 const app = express();
 
-// Register a simple GET route at the root URL so the Part 1 setup can still be tested.
+// Trust one reverse proxy so secure cookies and client IPs work behind a hosting provider.
+app.set("trust proxy", 1);
+
+// Allow the Next.js client origin to call the API and include session cookies.
+app.use(
+  cors({
+    // Allow only the configured client origin, never a wildcard with credentials.
+    origin: env.CLIENT_URL,
+
+    // Permit the browser to send and receive Better Auth session cookies.
+    credentials: true,
+
+    // List the HTTP methods used by the API.
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+
+    // Allow JSON bodies and Bearer tokens from API clients.
+    allowedHeaders: ["Content-Type", "Authorization"],
+  }),
+);
+
+// Cache the Better Auth handler after the first request so it is created only once.
+let authHandler: ReturnType<typeof toNodeHandler> | null = null;
+
+// Mount every Better Auth endpoint before the JSON parser so Better Auth receives the raw request body.
+app.all("/api/auth/*splat", (request, response) => {
+  // Create the handler lazily because Better Auth is initialised after the database connects.
+  authHandler ??= toNodeHandler(getAuth());
+
+  // Forward the request to Better Auth and return its response.
+  return authHandler(request, response);
+});
+
+// Parse JSON request bodies for the application API after Better Auth has handled its own routes.
+app.use(express.json({ limit: "1mb" }));
+
+// Register a simple GET route at the root URL so the setup can still be tested.
 app.get("/", (_request, response) => {
   // Send HTTP status 200 and a small JSON payload confirming that the server is alive.
   response.status(200).json({

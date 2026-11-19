@@ -2,7 +2,7 @@
 
 REST API server for **SalonBook**, a salon appointment booking platform. The API will handle salon services, appointment requests, customer accounts, admin management, image uploads, and Stripe test payments for a separate Next.js client.
 
-> **Status:** Part 2 of 15 complete — project setup, validated environment configuration, a cached MongoDB connection, shared model types, a health endpoint, and graceful shutdown. Authentication and API features are added in later parts.
+> **Status:** Part 3 of 15 complete — project setup, validated environment configuration, a cached MongoDB connection, shared model types, a health endpoint, graceful shutdown, and Better Auth with email/password, Google login, roles, blocked flags, and JWT support. Business API features are added in later parts.
 
 ## Planned features
 
@@ -66,6 +66,16 @@ npm run build
 npm start
 ```
 
+## Authentication
+
+Better Auth is mounted at `/api/auth` and handles sign-up, sign-in, Google login, sessions, JWT access, and logout.
+
+- Email and password sign-up is enabled with a six-character minimum password length.
+- New accounts always receive the `customer` role and `isBlocked: false`.
+- `role` and `isBlocked` are marked as server-only fields, so a sign-up or profile request cannot set or change them.
+- The JWT plugin provides `/api/auth/token` and `/api/auth/jwks` for Bearer-token verification.
+- Google OAuth callback URL: `BETTER_AUTH_URL/api/auth/callback/google`.
+
 ## Required environment variables
 
 Only the variable names are listed here. Real values must stay in the local `.env` file or the hosting provider settings.
@@ -107,6 +117,7 @@ src/
   config/
     env.ts            Environment validation
     db.ts             Cached MongoDB connection
+    auth.ts           Better Auth, Google login, roles, blocked flag, JWT plugin
   types/
     models.ts         Shared User, Service, Appointment, and Transaction types
 ```

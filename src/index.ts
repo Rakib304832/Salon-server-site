@@ -4,6 +4,9 @@ import { env } from "./config/env.js";
 // Import the MongoDB connection and shutdown helpers.
 import { connectDB, disconnectDB } from "./config/db.js";
 
+// Import the Better Auth initializer so auth is created after MongoDB is ready.
+import { initAuth } from "./config/auth.js";
+
 // Import the Express application configured in app.ts.
 // The .js extension is required because this project compiles to native ES modules.
 import app from "./app.js";
@@ -15,7 +18,10 @@ async function startServer(): Promise<void> {
     // Connect to MongoDB before accepting any HTTP traffic.
     await connectDB();
 
-    // Start the HTTP server only after the database connection succeeds.
+    // Initialise Better Auth only after the MongoDB database object is available.
+    initAuth();
+
+    // Start the HTTP server only after the database and auth setup succeed.
     const server = app.listen(env.PORT, () => {
       // Print the local address so the developer knows where the API is running.
       console.log(`SalonBook server is listening on http://localhost:${env.PORT}`);
