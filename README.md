@@ -2,7 +2,7 @@
 
 REST API server for **SalonBook**, a salon appointment booking platform. The API will handle salon services, appointment requests, customer accounts, admin management, image uploads, and Stripe test payments for a separate Next.js client.
 
-> **Status:** Part 3 of 15 complete — project setup, validated environment configuration, a cached MongoDB connection, shared model types, a health endpoint, graceful shutdown, and Better Auth with email/password, Google login, roles, blocked flags, and JWT support. Business API features are added in later parts.
+> **Status:** Part 5 of 15 complete — project setup, validated environment configuration, a cached MongoDB connection, Better Auth with email/password and Google login, roles and blocked flags, JWT support, shared auth/validation/error middleware, and an idempotent admin seed script. Business API features are added in later parts.
 
 ## Planned features
 
@@ -76,6 +76,24 @@ Better Auth is mounted at `/api/auth` and handles sign-up, sign-in, Google login
 - The JWT plugin provides `/api/auth/token` and `/api/auth/jwks` for Bearer-token verification.
 - Google OAuth callback URL: `BETTER_AUTH_URL/api/auth/callback/google`.
 
+Protected routes use `verifyAuth`, `checkBlocked`, and `verifyRole` in that order. `verifyAuth` accepts the Better Auth session cookie or a Bearer JWT, then reloads the user from MongoDB so role and blocked changes apply immediately. Blocked customers receive a `403` response with the code `ACCOUNT_BLOCKED`.
+
+All request validation errors, malformed IDs, duplicate keys, missing routes, and unexpected failures use one JSON envelope:
+
+```json
+{ "success": false, "message": "...", "errors": [] }
+```
+
+## Admin account
+
+Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env`, then run:
+
+```bash
+npm run seed:admin
+```
+
+The script creates the account through Better Auth when it is missing and promotes an existing account without resetting its password. Running it more than once is safe.
+
 ## Required environment variables
 
 Only the variable names are listed here. Real values must stay in the local `.env` file or the hosting provider settings.
@@ -105,21 +123,35 @@ Never commit the real `.env` file. The repository only includes `.env.example` w
 | `npm run build` | Compile TypeScript into the `dist` folder |
 | `npm start` | Run the compiled server |
 | `npm run typecheck` | Check types without writing build output |
-| `npm run seed:admin` | Create or promote the admin account (added in Part 5) |
+| `npm run seed:admin` | Create the admin account or promote an existing account |
 | `npm run seed:services` | Load the starting salon services (added in Part 6) |
 
 ## Project structure
 
 ```text
 src/
-  app.ts              Express application and health route
+  app.ts              Express application, health route, 404 and error handlers
   index.ts            Server entry point and graceful shutdown
   config/
     env.ts            Environment validation
     db.ts             Cached MongoDB connection
     auth.ts           Better Auth, Google login, roles, blocked flag, JWT plugin
+  middleware/
+    verifyAuth.ts     Cookie or Bearer JWT authentication with a fresh user
+    checkBlocked.ts   Blocked-account guard
+    verifyRole.ts     Role-based route guard
+    validate.ts       Zod body, params, and query validation
+    errorHandler.ts   Shared 404 and error envelope
+  utils/
+    ApiError.ts       Typed expected request errors
+    asyncHandler.ts   Async route error forwarding
+    response.ts       Shared success and error envelopes
+    constants.ts      Service categories and booking time slots
   types/
     models.ts         Shared User, Service, Appointment, and Transaction types
+    express.d.ts      Express req.user type augmentation
+  scripts/
+    seedAdmin.ts      Idempotent admin creation and promotion script
 ```
 
 The full structure will grow as each part of the build is completed.
