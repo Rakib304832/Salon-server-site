@@ -2,7 +2,7 @@
 
 REST API server for **SalonBook**, a salon appointment booking platform. The API will handle salon services, appointment requests, customer accounts, admin management, image uploads, and Stripe test payments for a separate Next.js client.
 
-> **Status:** Part 1 of 15 complete — project setup, TypeScript configuration, environment template, and a minimal Express server. API features are added in later parts.
+> **Status:** Part 2 of 15 complete — project setup, validated environment configuration, a cached MongoDB connection, shared model types, a health endpoint, and graceful shutdown. Authentication and API features are added in later parts.
 
 ## Planned features
 
@@ -55,7 +55,9 @@ Start the development server with automatic restarts:
 npm run dev
 ```
 
-The server runs at `http://localhost:5000` by default. Open that address in a browser to confirm it responds.
+The server runs at `http://localhost:5000` by default. Open that address in a browser to confirm it responds, or check the health endpoint at `http://localhost:5000/api/health`.
+
+The server validates every environment variable before connecting to MongoDB. If a required variable is missing or invalid, startup stops with a list of the exact problems.
 
 Build and run the compiled server:
 
@@ -100,8 +102,13 @@ Never commit the real `.env` file. The repository only includes `.env.example` w
 
 ```text
 src/
-  app.ts        Express application and routes
-  index.ts      Server entry point
+  app.ts              Express application and health route
+  index.ts            Server entry point and graceful shutdown
+  config/
+    env.ts            Environment validation
+    db.ts             Cached MongoDB connection
+  types/
+    models.ts         Shared User, Service, Appointment, and Transaction types
 ```
 
 The full structure will grow as each part of the build is completed.
