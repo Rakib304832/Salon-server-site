@@ -16,6 +16,9 @@ import { isDbConnected } from "./config/db.js";
 // Import the initialised Better Auth instance accessor.
 import { getAuth } from "./config/auth.js";
 
+// Import the shared 404 and error handlers placed after every route.
+import { errorHandler, notFound } from "./middleware/errorHandler.js";
+
 // Create the Express application instance that will receive every request.
 const app = express();
 
@@ -89,6 +92,12 @@ app.get("/api/health", (_request, response) => {
       : "SalonBook API is running but the database is unavailable",
   });
 });
+
+// Return a consistent JSON error for requests that matched no route.
+app.use(notFound);
+
+// Convert every thrown error into the shared error envelope.
+app.use(errorHandler);
 
 // Export the app without starting a network listener so later tests can import it.
 export default app;
