@@ -22,6 +22,9 @@ import { errorHandler, notFound } from "./middleware/errorHandler.js";
 // Import the public service routes and the separate admin service listing router.
 import { adminServicesRouter, servicesRouter } from "./routes/services.routes.js";
 
+// Import the protected image upload route.
+import { uploadsRouter } from "./routes/uploads.routes.js";
+
 // Create the Express application instance that will receive every request.
 const app = express();
 
@@ -99,6 +102,9 @@ app.get("/api/health", (_request, response) => {
 // Register the public and admin service routes before the fallback handlers.
 app.use("/api/services", servicesRouter);
 app.use("/api/admin/services", adminServicesRouter);
+
+// Register the protected ImgBB upload route.
+app.use("/api/uploads", uploadsRouter);
 
 // Return a consistent JSON error for requests that matched no route.
 app.use(notFound);

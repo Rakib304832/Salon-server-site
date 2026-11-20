@@ -2,7 +2,7 @@
 
 REST API server for **SalonBook**, a salon appointment booking platform. The API will handle salon services, appointment requests, customer accounts, admin management, image uploads, and Stripe test payments for a separate Next.js client.
 
-> **Status:** Part 7 of 15 complete — project setup, validated environment configuration, a cached MongoDB connection, Better Auth with email/password and Google login, roles and blocked flags, JWT support, shared auth/validation/error middleware, an idempotent admin seed script, the public service catalogue, admin service management, and service seed data. Appointment and payment APIs are added in later parts.
+> **Status:** Part 8 of 15 complete — project setup, validated environment configuration, a cached MongoDB connection, Better Auth with email/password and Google login, roles and blocked flags, JWT support, shared auth/validation/error middleware, an idempotent admin seed script, the public service catalogue, admin service management, service seed data, and protected ImgBB image uploads. Appointment and payment APIs are added in later parts.
 
 ## Planned features
 
@@ -112,6 +112,41 @@ GET /api/services?search=massage&category=Massage&sort=price_asc
 
 Inactive services never appear in the public list, but a signed-in user can still open the details by ID so the client can show a **Service unavailable** message. The delete route returns `409 Conflict` while a pending or confirmed appointment still references the service.
 
+## Image uploads API
+
+Authenticated users can upload service images and profile images through the server. The ImgBB API key stays in the server environment and is never returned to the client.
+
+| Method | Endpoint | Access | Purpose |
+| --- | --- | --- | --- |
+| `POST` | `/api/uploads` | Signed in, not blocked | Upload one image and return its ImgBB URL |
+
+Request requirements:
+
+- Send `multipart/form-data` with the file in the field named `image`.
+- JPEG, PNG, and WebP only.
+- Maximum file size: 5 MB.
+- Each IP address can make ten upload attempts per fifteen minutes. The eleventh returns `429` with code `UPLOAD_RATE_LIMITED`.
+
+Example:
+
+```bash
+curl -X POST http://localhost:5000/api/uploads \
+  -H "Cookie: better-auth.session_token=<your-session-cookie>" \
+  -F "image=@./photo.jpg"
+```
+
+Success response:
+
+```json
+{
+  "success": true,
+  "data": { "url": "https://i.ibb.co/..." },
+  "message": "Image uploaded successfully"
+}
+```
+
+Sign-up continues to accept an image URL. After login, upload the file first and then save the returned URL as the profile image or admin service image. Invalid files return `400`, a blocked account returns `403 ACCOUNT_BLOCKED`, and an ImgBB failure returns `502` without exposing the key or upstream response body. `IMGBB_API_KEY` must contain a real ImgBB key; an invalid or placeholder value produces the safe `502` response.
+
 ## Admin account
 
 Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env`, then run:
@@ -178,14 +213,19 @@ src/
     Service.ts        Salon service schema, rules, and indexes
   controllers/
     services.controller.ts  Public catalogue and admin service handlers
+    uploads.controller.ts   ImgBB upload handler
   routes/
     services.routes.ts      Public and admin service route definitions
+    uploads.routes.ts       Protected image upload route
   middleware/
     verifyAuth.ts     Cookie or Bearer JWT authentication with a fresh user
     checkBlocked.ts   Blocked-account guard
     verifyRole.ts     Role-based route guard
     validate.ts       Zod body, params, and query validation
+    upload.ts         Multer memory storage, MIME filter, and upload rate limit
     errorHandler.ts   Shared 404 and error envelope
+  services/
+    imgbb.ts          Server-side ImgBB upload client
   utils/
     ApiError.ts       Typed expected request errors
     asyncHandler.ts   Async route error forwarding

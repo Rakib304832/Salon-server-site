@@ -47,6 +47,12 @@ function isInvalidObjectIdError(error: unknown): boolean {
   return error.name === "BSONError" && /ObjectId|24 character hex/i.test(error.message);
 }
 
+// Detect Multer failures such as oversized files and unexpected fields.
+function isMulterError(error: unknown): error is Error & { code?: string } {
+  // Multer names every parsing failure "MulterError".
+  return error instanceof Error && error.name === "MulterError";
+}
+
 // Return the shared 404 envelope for routes that do not exist.
 export const notFound: RequestHandler = (_request, _response, next) => {
   // Forward a 404 so the error handler writes the same envelope as other errors.
@@ -82,6 +88,25 @@ export const errorHandler: ErrorRequestHandler = (error, _request, response, nex
   // Handle unique-index conflicts such as duplicate bookings.
   if (isDuplicateKeyError(error)) {
     sendError(response, 409, "A record with these values already exists");
+    return;
+  }
+
+  // Handle Multer parsing failures with clear upload messages.
+  if (isMulterError(error)) {
+    // Reject files above the five-megabyte limit.
+    if (error.code === "LIMIT_FILE_SIZE") {
+      sendError(response, 400, "Image must be 5 MB or smaller");
+      return;
+    }
+
+    // Reject extra files or a field name other than "image".
+    if (error.code === "LIMIT_FILE_COUNT" || error.code === "LIMIT_UNEXPECTED_FILE") {
+      sendError(response, 400, "Upload exactly one image in the 'image' field");
+      return;
+    }
+
+    // Return a safe generic message for every other Multer failure.
+    sendError(response, 400, "Image upload failed. Please check the file and try again.");
     return;
   }
 
