@@ -52,9 +52,6 @@ export interface ServiceBody {
 
   // Valid image URL returned by ImgBB.
   image: string;
-
-  // Optional status; new services default to active.
-  status?: ServiceStatus;
 }
 
 // Add the MongoDB identifier to a lean service document.
@@ -192,11 +189,8 @@ export const createService = asyncHandler(async (request, response) => {
   // Read the body already validated and stripped by the route schema.
   const body = request.body as ServiceBody;
 
-  // Create the service with active as the default status.
-  const created = await ServiceModel.create({
-    ...body,
-    status: body.status ?? "active",
-  });
+  // Create the service; the model assigns the active status by default.
+  const created = await ServiceModel.create(body);
 
   // Return the created service with 201 Created.
   sendSuccess(
@@ -293,5 +287,5 @@ export const deleteService = asyncHandler(async (request, response) => {
   await ServiceModel.deleteOne({ _id: serviceId });
 
   // Return the deleted identifier inside the shared success envelope.
-  sendSuccess(response, { _id: id }, "Service deleted successfully");
+  sendSuccess(response, { _id: serviceId.toString() }, "Service deleted successfully");
 });

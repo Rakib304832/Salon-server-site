@@ -19,6 +19,9 @@ import { getAuth } from "./config/auth.js";
 // Import the shared 404 and error handlers placed after every route.
 import { errorHandler, notFound } from "./middleware/errorHandler.js";
 
+// Import the shared success and error envelopes.
+import { sendError, sendSuccess } from "./utils/response.js";
+
 // Import the public service routes and the separate admin service listing router.
 import { adminServicesRouter, servicesRouter } from "./routes/services.routes.js";
 
@@ -65,13 +68,8 @@ app.use(express.json({ limit: "1mb" }));
 
 // Register a simple GET route at the root URL so the setup can still be tested.
 app.get("/", (_request, response) => {
-  // Send HTTP status 200 and a small JSON payload confirming that the server is alive.
-  response.status(200).json({
-    // The success flag keeps the response consistent with the API response format.
-    success: true,
-    // The message is the only information needed for this setup check.
-    message: "SalonBook server is running",
-  });
+  // Return the shared success envelope with a small setup payload.
+  sendSuccess(response, { service: "SalonBook API" }, "SalonBook server is running");
 });
 
 // Register the health endpoint used by developers and the deployment host.
@@ -79,24 +77,34 @@ app.get("/api/health", (_request, response) => {
   // Read the live Mongoose connection state for this request.
   const databaseConnected = isDbConnected();
 
-  // Return 200 when healthy and 503 when the database cannot serve requests.
-  response.status(databaseConnected ? 200 : 503).json({
-    // Report success only when every dependency is available.
-    success: databaseConnected,
-    // Expose only safe operational information, never credentials or connection strings.
-    data: {
-      // Identify the running API.
-      service: "SalonBook API",
-      // Describe the database state in a human-readable form.
-      database: databaseConnected ? "connected" : "disconnected",
-      // Report how long the Node.js process has been running.
-      uptimeSeconds: Math.floor(process.uptime()),
-    },
-    // Give the caller a short explanation of the result.
-    message: databaseConnected
-      ? "SalonBook API is healthy"
-      : "SalonBook API is running but the database is unavailable",
-  });
+  // Report how long the Node.js process has been running.
+  const uptimeSeconds = Math.floor(process.uptime());
+
+  // Use the success envelope when every dependency is available.
+  if (databaseConnected) {
+    sendSuccess(
+      response,
+      {
+        // Identify the running API.
+        service: "SalonBook API",
+        // Describe the database state in a human-readable form.
+        database: "connected",
+        // Expose the process uptime without leaking configuration.
+        uptimeSeconds,
+      },
+      "SalonBook API is healthy",
+    );
+    return;
+  }
+
+  // Use the error envelope when the database cannot serve requests.
+  sendError(
+    response,
+    503,
+    "SalonBook API is running but the database is unavailable",
+    [{ field: "database", message: "disconnected" }],
+    "DATABASE_UNAVAILABLE",
+  );
 });
 
 // Register the public and admin service routes before the fallback handlers.

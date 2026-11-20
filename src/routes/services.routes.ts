@@ -75,9 +75,6 @@ const createServiceSchema = z.object({
 
   // Require a valid image URL, normally returned by the ImgBB upload endpoint.
   image: z.url("Image must be a valid URL"),
-
-  // Allow an admin to create an inactive service; the model defaults to active.
-  status: z.enum(["active", "inactive"]).optional(),
 });
 
 // Allow partial updates while still rejecting an empty body.
@@ -107,6 +104,7 @@ servicesRouter.get(
   "/:id",
   verifyAuth,
   checkBlocked,
+  verifyRole("customer", "admin"),
   validate({ params: serviceIdParamsSchema }),
   getServiceById,
 );

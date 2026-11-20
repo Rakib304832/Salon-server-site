@@ -110,11 +110,11 @@ Example:
 GET /api/services?search=massage&category=Massage&sort=price_asc
 ```
 
-Inactive services never appear in the public list, but a signed-in user can still open the details by ID so the client can show a **Service unavailable** message. The delete route returns `409 Conflict` while a pending or confirmed appointment still references the service.
+Inactive services never appear in the public list, but a signed-in user can still open the details by ID so the client can show a **Service unavailable** message. The delete route returns `409 Conflict` while a pending or confirmed appointment still references the service. Service status is changed only through `PATCH /api/services/:id/status`; create and update bodies ignore any client-supplied `status` value.
 
 ## Image uploads API
 
-Authenticated users can upload service images and profile images through the server. The ImgBB API key stays in the server environment and is never returned to the client.
+Authenticated users can upload service images and profile images through the server. The ImgBB API key stays in the server environment and is never returned to the client. Protected routes use `verifyAuth → checkBlocked → verifyRole("customer", "admin")` so both customer and admin accounts can upload images.
 
 | Method | Endpoint | Access | Purpose |
 | --- | --- | --- | --- |
