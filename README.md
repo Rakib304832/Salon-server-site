@@ -2,7 +2,7 @@
 
 REST API server for **SalonBook**, a salon appointment booking platform. The API will handle salon services, appointment requests, customer accounts, admin management, image uploads, and Stripe test payments for a separate Next.js client.
 
-> **Status:** Part 13 of 15 complete — project setup, validated environment configuration, a cached MongoDB connection, Better Auth with email/password and Google login, roles and blocked flags, JWT support, shared auth/validation/error middleware, an idempotent admin seed script, the public service catalogue, admin service management, service seed data, protected ImgBB image uploads, customer appointment booking, listing and cancellation, admin appointment management, Stripe Checkout session creation, a verified Stripe webhook, payment transaction records, customer profiles, and admin user management. Statistics and final hardening are added in later parts.
+> **Status:** Part 14 of 15 complete — project setup, validated environment configuration, a cached MongoDB connection, Better Auth with email/password and Google login, roles and blocked flags, JWT support, shared auth/validation/error middleware, an idempotent admin seed script, the public service catalogue, admin service management, service seed data, protected ImgBB image uploads, customer appointment booking, listing and cancellation, admin appointment management, Stripe Checkout session creation, a verified Stripe webhook, payment transaction records, customer profiles, admin user management, and dashboard statistics. Final hardening is added in the last part.
 
 ## Planned features
 
@@ -263,6 +263,24 @@ Profile updates accept at least one of `name`, `phone`, or `image`. An empty str
 
 An administrator cannot block or change the role of their own account, and the final admin account cannot be demoted. User responses contain only `id`, `name`, `email`, `image`, `role`, `isBlocked`, and `phone`; password hashes and session records are never returned.
 
+## Admin dashboard API
+
+| Method | Endpoint | Access | Purpose |
+| --- | --- | --- | --- |
+| `GET` | `/api/admin/stats` | Admin | Return dashboard counts, revenue, and activity summaries |
+
+The route uses `verifyAuth → checkBlocked → verifyRole("admin")`. Every value is calculated from server-owned records; the client supplies no filters or amounts.
+
+The response data contains:
+
+- `counts` — users, customers, services, active services, appointments by lifecycle state, paid appointments, and paid/failed transactions
+- `revenue.total` — sum of all paid transaction amounts in the smallest currency unit
+- `revenue.byCurrency` — the same total split by Stripe-reported currency
+- `recentAppointments` — the five newest appointment requests with their service details
+- `popularServices` — the five most booked services, excluding cancelled appointments
+
+Revenue comes only from transactions recorded by the verified Stripe webhook. Failed transactions are counted but never included in revenue.
+
 ## Image uploads API
 
 Authenticated users can upload service images and profile images through the server. The ImgBB API key stays in the server environment and is never returned to the client. Protected routes use `verifyAuth → checkBlocked → verifyRole("customer", "admin")` so both customer and admin accounts can upload images.
@@ -374,6 +392,7 @@ src/
     stripeWebhook.controller.ts        Signed webhook payment processing
     transactions.controller.ts         Admin transaction list
     users.controller.ts                 Profile and admin user management
+    stats.controller.ts                 Admin dashboard statistics
     uploads.controller.ts              ImgBB upload handler
   routes/
     services.routes.ts            Public and admin service route definitions
@@ -383,6 +402,7 @@ src/
     transactions.routes.ts        Protected admin transaction route
     users.routes.ts               Protected customer profile routes
     adminUsers.routes.ts          Protected admin user routes
+    stats.routes.ts               Protected admin dashboard route
     uploads.routes.ts             Protected image upload route
   middleware/
     verifyAuth.ts     Cookie or Bearer JWT authentication with a fresh user

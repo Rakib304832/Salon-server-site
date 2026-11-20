@@ -37,6 +37,9 @@ import { adminTransactionsRouter } from "./routes/transactions.routes.js";
 // Import the admin user management route.
 import { adminUsersRouter } from "./routes/adminUsers.routes.js";
 
+// Import the admin dashboard statistics route.
+import { statsRouter } from "./routes/stats.routes.js";
+
 // Import the signed-in profile route.
 import { usersRouter } from "./routes/users.routes.js";
 
@@ -149,6 +152,9 @@ app.use("/api/admin/transactions", adminTransactionsRouter);
 
 // Register the admin user management route.
 app.use("/api/admin/users", adminUsersRouter);
+
+// Register the admin dashboard statistics route.
+app.use("/api/admin/stats", statsRouter);
 
 // Register the signed-in profile route.
 app.use("/api/users", usersRouter);

@@ -126,3 +126,75 @@ export interface Transaction {
   // ISO timestamp used as the transaction date.
   createdAt: string;
 }
+
+// Describe the popular-service summary shown on the admin dashboard.
+export interface PopularServiceStat {
+  // Service identifier from the bookings that were counted.
+  serviceId: string;
+
+  // Name copied from the current service document.
+  serviceName: string;
+
+  // Number of non-cancelled appointments for this service.
+  bookings: number;
+}
+
+// Describe the counts shown on the admin dashboard.
+export interface DashboardCounts {
+  // Every registered account, including administrators.
+  users: number;
+
+  // Accounts with the customer role.
+  customers: number;
+
+  // Every salon service, active or inactive.
+  services: number;
+
+  // Services currently visible to customers.
+  activeServices: number;
+
+  // Every appointment request ever created.
+  appointments: number;
+
+  // Appointment requests waiting for admin confirmation.
+  pendingAppointments: number;
+
+  // Appointment requests that have been confirmed.
+  confirmedAppointments: number;
+
+  // Appointment requests that were cancelled.
+  cancelledAppointments: number;
+
+  // Appointments whose Stripe payment has completed.
+  paidAppointments: number;
+
+  // Paid transactions recorded from verified Stripe events.
+  paidTransactions: number;
+
+  // Failed transactions recorded from verified Stripe events.
+  failedTransactions: number;
+}
+
+// Describe the revenue summary returned by the admin dashboard.
+export interface DashboardRevenue {
+  // Total collected amount across all currencies in the smallest currency unit.
+  total: number;
+
+  // Per-currency totals in the smallest currency unit.
+  byCurrency: Array<{ currency: string; amount: number }>;
+}
+
+// Describe the complete admin dashboard payload.
+export interface DashboardStats {
+  // Counts calculated from server-owned database records.
+  counts: DashboardCounts;
+
+  // Revenue calculated only from paid transactions created by the Stripe webhook.
+  revenue: DashboardRevenue;
+
+  // Five newest appointments with their service details.
+  recentAppointments: Appointment[];
+
+  // Five most booked services, excluding cancelled appointments.
+  popularServices: PopularServiceStat[];
+}
