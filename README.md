@@ -2,7 +2,7 @@
 
 REST API server for **SalonBook**, a salon appointment booking platform. The API will handle salon services, appointment requests, customer accounts, admin management, image uploads, and Stripe test payments for a separate Next.js client.
 
-> **Status:** Part 8 of 15 complete — project setup, validated environment configuration, a cached MongoDB connection, Better Auth with email/password and Google login, roles and blocked flags, JWT support, shared auth/validation/error middleware, an idempotent admin seed script, the public service catalogue, admin service management, service seed data, and protected ImgBB image uploads. Appointment and payment APIs are added in later parts.
+> **Status:** Part 9 of 15 complete — project setup, validated environment configuration, a cached MongoDB connection, Better Auth with email/password and Google login, roles and blocked flags, JWT support, shared auth/validation/error middleware, an idempotent admin seed script, the public service catalogue, admin service management, service seed data, protected ImgBB image uploads, and customer appointment booking, listing, and cancellation. Payment and admin management APIs are added in later parts.
 
 ## Planned features
 
@@ -112,6 +112,76 @@ GET /api/services?search=massage&category=Massage&sort=price_asc
 
 Inactive services never appear in the public list, but a signed-in user can still open the details by ID so the client can show a **Service unavailable** message. The delete route returns `409 Conflict` while a pending or confirmed appointment still references the service. Service status is changed only through `PATCH /api/services/:id/status`; create and update bodies ignore any client-supplied `status` value.
 
+## Appointments API
+
+Customers can request, list, and cancel their own appointments. Every route uses `verifyAuth → checkBlocked → verifyRole("customer")` in that order. Admins do not book appointments through these customer routes.
+
+| Method | Endpoint | Access | Purpose |
+| --- | --- | --- | --- |
+| `POST` | `/api/appointments` | Customer | Request a new appointment |
+| `GET` | `/api/appointments/mine` | Customer | List only the signed-in customer's appointments |
+| `PATCH` | `/api/appointments/:id/cancel` | Customer | Cancel the customer's own pending appointment |
+
+The create route accepts only these fields:
+
+| Field | Rule |
+| --- | --- |
+| `serviceId` | Valid 24-character MongoDB ID for an **active** service |
+| `appointmentDate` | Real calendar date in `YYYY-MM-DD` format, after today |
+| `timeSlot` | One of the ten hourly slots from `TIME_SLOTS` |
+| `message` | Optional note, maximum 500 characters |
+
+The server derives `customerId` from the session, copies `servicePrice` from the service document, and always starts new requests with `status: "pending"` and `paymentStatus: "unpaid"`. Client-supplied `customerId`, `servicePrice`, `status`, and `paymentStatus` are never used.
+
+Example request:
+
+```json
+{
+  "serviceId": "65f0a1b2c3d4e5f607182930",
+  "appointmentDate": "2026-12-01",
+  "timeSlot": "10:00 AM",
+  "message": "Please use the lavender oil."
+}
+```
+
+Success response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "_id": "65f0a1b2c3d4e5f607182931",
+    "serviceId": {
+      "_id": "65f0a1b2c3d4e5f607182930",
+      "serviceName": "Swedish Massage",
+      "category": "Massage",
+      "description": "A relaxing full-body massage.",
+      "price": 80,
+      "duration": 60,
+      "image": "https://i.ibb.co/...",
+      "status": "active",
+      "createdAt": "2026-11-01T00:00:00.000Z"
+    },
+    "customerId": "65f0a1b2c3d4e5f607182932",
+    "appointmentDate": "2026-12-01",
+    "timeSlot": "10:00 AM",
+    "message": "Please use the lavender oil.",
+    "servicePrice": 80,
+    "paymentStatus": "unpaid",
+    "status": "pending",
+    "createdAt": "2026-11-20T12:00:00.000Z"
+  },
+  "message": "Appointment requested successfully"
+}
+```
+
+Booking rules:
+
+- Two `pending` or `confirmed` appointments cannot share the same `serviceId`, `appointmentDate`, and `timeSlot`. A duplicate returns `409` with code `SLOT_ALREADY_BOOKED`.
+- Cancelling an appointment removes it from the active-slot index, so the same date and slot can be booked again.
+- The list route returns only the signed-in customer's records, newest first, with current service details.
+- The cancel route returns `404` for another customer's appointment, `409` for a paid appointment, and `409` for any appointment that is no longer `pending`.
+
 ## Image uploads API
 
 Authenticated users can upload service images and profile images through the server. The ImgBB API key stays in the server environment and is never returned to the client. Protected routes use `verifyAuth → checkBlocked → verifyRole("customer", "admin")` so both customer and admin accounts can upload images.
@@ -204,18 +274,22 @@ Never commit the real `.env` file. The repository only includes `.env.example` w
 ```text
 src/
   app.ts              Express application, health route, 404 and error handlers
-  index.ts            Server entry point and graceful shutdown
+  index.ts            Server entry point, graceful shutdown, and appointment indexes
   config/
     env.ts            Environment validation
     db.ts             Cached MongoDB connection
     auth.ts           Better Auth, Google login, roles, blocked flag, JWT plugin
   models/
     Service.ts        Salon service schema, rules, and indexes
+    Appointment.ts    Booking schema and active-slot unique index
+    User.ts           Minimal Better Auth user model used by appointment refs
   controllers/
-    services.controller.ts  Public catalogue and admin service handlers
-    uploads.controller.ts   ImgBB upload handler
+    services.controller.ts       Public catalogue and admin service handlers
+    appointments.controller.ts   Customer booking, listing, and cancellation
+    uploads.controller.ts        ImgBB upload handler
   routes/
     services.routes.ts      Public and admin service route definitions
+    appointments.routes.ts  Protected customer appointment routes
     uploads.routes.ts       Protected image upload route
   middleware/
     verifyAuth.ts     Cookie or Bearer JWT authentication with a fresh user
@@ -225,6 +299,7 @@ src/
     upload.ts         Multer memory storage, MIME filter, and upload rate limit
     errorHandler.ts   Shared 404 and error envelope
   services/
+    bookingRules.ts   Date, slot, and future-appointment validation
     imgbb.ts          Server-side ImgBB upload client
   utils/
     ApiError.ts       Typed expected request errors

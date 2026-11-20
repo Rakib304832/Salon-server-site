@@ -7,6 +7,9 @@ import { connectDB, disconnectDB } from "./config/db.js";
 // Import the Better Auth initializer so auth is created after MongoDB is ready.
 import { initAuth } from "./config/auth.js";
 
+// Import the appointment model so its unique slot index is built on startup.
+import { AppointmentModel } from "./models/Appointment.js";
+
 // Import the Express application configured in app.ts.
 // The .js extension is required because this project compiles to native ES modules.
 import app from "./app.js";
@@ -17,6 +20,9 @@ async function startServer(): Promise<void> {
   try {
     // Connect to MongoDB before accepting any HTTP traffic.
     await connectDB();
+
+    // Create the appointment indexes, including the active-slot uniqueness rule.
+    await AppointmentModel.createIndexes();
 
     // Initialise Better Auth only after the MongoDB database object is available.
     initAuth();

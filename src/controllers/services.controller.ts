@@ -270,7 +270,7 @@ export const deleteService = asyncHandler(async (request, response) => {
   }
 
   // Count appointments that would become orphaned by this deletion.
-  // The appointments collection is created by the booking model in Part 9.
+  // The appointment model writes to this same collection.
   const activeAppointments = await getDb().collection("appointments").countDocuments({
     serviceId,
     status: { $in: ["pending", "confirmed"] },
