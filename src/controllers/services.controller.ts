@@ -217,7 +217,7 @@ export const updateService = asyncHandler(async (request, response) => {
   const updated = await ServiceModel.findByIdAndUpdate(
     id,
     { $set: body },
-    { new: true, runValidators: true },
+    { returnDocument: "after", runValidators: true },
   ).lean();
 
   // Return a clear 404 when the service does not exist.
@@ -243,7 +243,7 @@ export const updateServiceStatus = asyncHandler(async (request, response) => {
   const updated = await ServiceModel.findByIdAndUpdate(
     id,
     { $set: { status } },
-    { new: true, runValidators: true },
+    { returnDocument: "after", runValidators: true },
   ).lean();
 
   // Return a clear 404 when the service does not exist.
