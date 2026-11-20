@@ -38,10 +38,10 @@ interface CreateAppointmentBody {
 }
 
 // Add the MongoDB identifier to a lean appointment document.
-type AppointmentRecord = AppointmentInput & { _id: mongoose.Types.ObjectId };
+export type AppointmentRecord = AppointmentInput & { _id: mongoose.Types.ObjectId };
 
 // Add the MongoDB identifier to a lean service document.
-type ServiceRecord = ServiceInput & { _id: mongoose.Types.ObjectId };
+export type ServiceRecord = ServiceInput & { _id: mongoose.Types.ObjectId };
 
 // Build the conflict error used when an active slot is already taken.
 function slotConflictError(): ApiError {
@@ -88,7 +88,7 @@ function serializeService(service: ServiceRecord): Service {
 }
 
 // Convert a stored appointment into the shared response shape.
-function serializeAppointment(
+export function serializeAppointment(
   appointment: AppointmentRecord,
   service?: ServiceRecord,
 ): Appointment {

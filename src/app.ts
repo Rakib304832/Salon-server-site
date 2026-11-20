@@ -25,6 +25,9 @@ import { sendError, sendSuccess } from "./utils/response.js";
 // Import the public service routes and the separate admin service listing router.
 import { adminServicesRouter, servicesRouter } from "./routes/services.routes.js";
 
+// Import the admin appointment management route.
+import { adminAppointmentsRouter } from "./routes/adminAppointments.routes.js";
+
 // Import the protected customer appointment route.
 import { appointmentsRouter } from "./routes/appointments.routes.js";
 
@@ -113,6 +116,9 @@ app.get("/api/health", (_request, response) => {
 // Register the public and admin service routes before the fallback handlers.
 app.use("/api/services", servicesRouter);
 app.use("/api/admin/services", adminServicesRouter);
+
+// Register the admin appointment management route.
+app.use("/api/admin/appointments", adminAppointmentsRouter);
 
 // Register the protected customer appointment route.
 app.use("/api/appointments", appointmentsRouter);

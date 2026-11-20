@@ -2,7 +2,7 @@
 
 REST API server for **SalonBook**, a salon appointment booking platform. The API will handle salon services, appointment requests, customer accounts, admin management, image uploads, and Stripe test payments for a separate Next.js client.
 
-> **Status:** Part 9 of 15 complete — project setup, validated environment configuration, a cached MongoDB connection, Better Auth with email/password and Google login, roles and blocked flags, JWT support, shared auth/validation/error middleware, an idempotent admin seed script, the public service catalogue, admin service management, service seed data, protected ImgBB image uploads, and customer appointment booking, listing, and cancellation. Payment and admin management APIs are added in later parts.
+> **Status:** Part 10 of 15 complete — project setup, validated environment configuration, a cached MongoDB connection, Better Auth with email/password and Google login, roles and blocked flags, JWT support, shared auth/validation/error middleware, an idempotent admin seed script, the public service catalogue, admin service management, service seed data, protected ImgBB image uploads, customer appointment booking, listing and cancellation, and admin appointment management. Payment, user management, and statistics APIs are added in later parts.
 
 ## Planned features
 
@@ -182,6 +182,24 @@ Booking rules:
 - The list route returns only the signed-in customer's records, newest first, with current service details.
 - The cancel route returns `404` for another customer's appointment, `409` for a paid appointment, and `409` for any appointment that is no longer `pending`.
 
+## Admin appointments API
+
+Administrators can review and manage every appointment. Both routes use `verifyAuth → checkBlocked → verifyRole("admin")`.
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/admin/appointments` | List all appointments with optional filters |
+| `PATCH` | `/api/admin/appointments/:id/status` | Confirm a pending request or cancel an unpaid appointment |
+
+Supported list filters:
+
+- `status` — `pending`, `confirmed`, or `cancelled`
+- `paymentStatus` — `unpaid` or `paid`
+- `appointmentDate` — exact date in `YYYY-MM-DD` format
+- `serviceId` and `customerId` — exact 24-character MongoDB IDs
+
+The status route accepts only `confirmed` or `cancelled`. Cancelled appointments cannot be reopened, and paid appointments cannot be cancelled because refunds are handled outside this API. Both restrictions return `409`.
+
 ## Image uploads API
 
 Authenticated users can upload service images and profile images through the server. The ImgBB API key stays in the server environment and is never returned to the client. Protected routes use `verifyAuth → checkBlocked → verifyRole("customer", "admin")` so both customer and admin accounts can upload images.
@@ -284,13 +302,15 @@ src/
     Appointment.ts    Booking schema and active-slot unique index
     User.ts           Minimal Better Auth user model used by appointment refs
   controllers/
-    services.controller.ts       Public catalogue and admin service handlers
-    appointments.controller.ts   Customer booking, listing, and cancellation
-    uploads.controller.ts        ImgBB upload handler
+    services.controller.ts            Public catalogue and admin service handlers
+    appointments.controller.ts        Customer booking, listing, and cancellation
+    adminAppointments.controller.ts   Admin appointment review and status changes
+    uploads.controller.ts             ImgBB upload handler
   routes/
-    services.routes.ts      Public and admin service route definitions
-    appointments.routes.ts  Protected customer appointment routes
-    uploads.routes.ts       Protected image upload route
+    services.routes.ts            Public and admin service route definitions
+    appointments.routes.ts        Protected customer appointment routes
+    adminAppointments.routes.ts   Protected admin appointment routes
+    uploads.routes.ts             Protected image upload route
   middleware/
     verifyAuth.ts     Cookie or Bearer JWT authentication with a fresh user
     checkBlocked.ts   Blocked-account guard
