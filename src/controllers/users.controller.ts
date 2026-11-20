@@ -193,7 +193,7 @@ export const updateUserBlock = asyncHandler(async (request, response) => {
   }
 
   // Prevent an administrator from locking themselves out of the API.
-  if (userId === request.user.id) {
+  if (userId.toLowerCase() === request.user.id.toLowerCase()) {
     throw ApiError.badRequest("You cannot change your own blocked state", [
       { field: "id", message: "Ask another administrator to change this value" },
     ]);
@@ -228,7 +228,7 @@ export const updateUserRole = asyncHandler(async (request, response) => {
   }
 
   // Prevent administrators from removing their own admin access.
-  if (userId === request.user.id) {
+  if (userId.toLowerCase() === request.user.id.toLowerCase()) {
     throw ApiError.badRequest("You cannot change your own role", [
       { field: "id", message: "Ask another administrator to change this value" },
     ]);

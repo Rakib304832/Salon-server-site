@@ -19,6 +19,9 @@ import { getAuth } from "./config/auth.js";
 // Import the shared 404 and error handlers placed after every route.
 import { errorHandler, notFound } from "./middleware/errorHandler.js";
 
+// Import the response security headers applied to every request.
+import { securityHeaders } from "./middleware/securityHeaders.js";
+
 // Import the shared success and error envelopes.
 import { sendError, sendSuccess } from "./utils/response.js";
 
@@ -57,6 +60,12 @@ const app = express();
 
 // Trust one reverse proxy so secure cookies and client IPs work behind a hosting provider.
 app.set("trust proxy", 1);
+
+// Stop Express from advertising the framework in error and response headers.
+app.disable("x-powered-by");
+
+// Apply conservative security headers before any route writes a response.
+app.use(securityHeaders);
 
 // Allow the Next.js client origin to call the API and include session cookies.
 app.use(

@@ -2,9 +2,9 @@
 
 REST API server for **SalonBook**, a salon appointment booking platform. The API will handle salon services, appointment requests, customer accounts, admin management, image uploads, and Stripe test payments for a separate Next.js client.
 
-> **Status:** Part 14 of 15 complete — project setup, validated environment configuration, a cached MongoDB connection, Better Auth with email/password and Google login, roles and blocked flags, JWT support, shared auth/validation/error middleware, an idempotent admin seed script, the public service catalogue, admin service management, service seed data, protected ImgBB image uploads, customer appointment booking, listing and cancellation, admin appointment management, Stripe Checkout session creation, a verified Stripe webhook, payment transaction records, customer profiles, admin user management, and dashboard statistics. Final hardening is added in the last part.
+> **Status:** Part 15 of 15 complete — project setup, validated environment configuration, a cached MongoDB connection, Better Auth with email/password and Google login, roles and blocked flags, JWT support, shared auth/validation/error middleware, an idempotent admin seed script, the public service catalogue, admin service management, service seed data, protected ImgBB image uploads, customer appointment booking, listing and cancellation, admin appointment management, Stripe Checkout session creation, a verified Stripe webhook, payment transaction records, customer profiles, admin user management, dashboard statistics, and final response hardening. The server is complete and verified with `npm run typecheck` and `npm run build`.
 
-## Planned features
+## Implemented features
 
 - Sign-up, sign-in, Google login, sessions, and logout through Better Auth
 - Role-based access for customers and admins
@@ -78,11 +78,25 @@ Better Auth is mounted at `/api/auth` and handles sign-up, sign-in, Google login
 
 Protected routes use `verifyAuth`, `checkBlocked`, and `verifyRole` in that order. `verifyAuth` accepts the Better Auth session cookie or a Bearer JWT, then reloads the user from MongoDB so role and blocked changes apply immediately. Blocked customers receive a `403` response with the code `ACCOUNT_BLOCKED`.
 
+Every successful response uses one JSON envelope:
+
+```json
+{ "success": true, "data": {}, "message": "..." }
+```
+
 All request validation errors, malformed IDs, duplicate keys, missing routes, and unexpected failures use one JSON envelope:
 
 ```json
 { "success": false, "message": "...", "errors": [] }
 ```
+
+## Final hardening
+
+Every response includes conservative security headers: `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy`, `Permissions-Policy`, `Strict-Transport-Security`, and a restrictive `Content-Security-Policy`. API responses are marked `no-store`, and the Express `X-Powered-By` header is disabled.
+
+Server-owned values are never taken from request bodies: roles and blocked flags stay under Better Auth and admin-only routes, appointment customers and prices come from the session and service document, appointment and payment states move only through their dedicated routes, and Stripe amounts come only from signed webhook events. CORS allows only the configured `CLIENT_URL` with credentials, the Stripe webhook is verified against raw request bytes, and upload attempts are rate limited.
+
+Self-protection checks normalize hexadecimal IDs, so an uppercase version of an administrator's own ID cannot bypass the self-block or self-role guard. Both completed and failed webhook events verify that the signed metadata still belongs to an existing appointment before any write. A completed event that arrives after a customer cancelled an appointment records the real payment but keeps the appointment cancelled, so the slot remains reusable.
 
 ## Services API
 
@@ -235,7 +249,7 @@ Stripe posts payment events to `POST /api/payments/webhook`. This route has no s
 
 | Event | Server action |
 | --- | --- |
-| `checkout.session.completed` | Marks the appointment `paid` and `confirmed`, then records a `paid` transaction |
+| `checkout.session.completed` | Marks the appointment `paid` and, unless it was cancelled, `confirmed`, then records a `paid` transaction |
 | `checkout.session.expired` | Records a `failed` transaction without changing the appointment |
 | `checkout.session.async_payment_failed` | Records a `failed` transaction |
 
@@ -408,9 +422,10 @@ src/
     verifyAuth.ts     Cookie or Bearer JWT authentication with a fresh user
     checkBlocked.ts   Blocked-account guard
     verifyRole.ts     Role-based route guard
-    validate.ts       Zod body, params, and query validation
-    upload.ts         Multer memory storage, MIME filter, and upload rate limit
-    errorHandler.ts   Shared 404 and error envelope
+    validate.ts          Zod body, params, and query validation
+    upload.ts            Multer memory storage, MIME filter, and upload rate limit
+    securityHeaders.ts   Conservative response headers and no-store policy
+    errorHandler.ts      Shared 404 and error envelope
   services/
     bookingRules.ts   Date, slot, and future-appointment validation
     imgbb.ts          Server-side ImgBB upload client

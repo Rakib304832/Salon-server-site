@@ -73,7 +73,26 @@ async function recordTransaction(
   );
 }
 
-// Mark an appointment paid and confirmed after Stripe reports a completed checkout.
+// Load an appointment and confirm the signed metadata still matches its owner.
+async function findOwnedCheckoutAppointment(appointmentId: string, customerId: string) {
+  // Confirm that the appointment still exists before changing payment state.
+  const appointment = await AppointmentModel.findById(appointmentId);
+  if (!appointment) {
+    console.error("Stripe checkout referenced a missing appointment");
+    return null;
+  }
+
+  // Ensure the metadata customer still owns the appointment, ignoring hex case.
+  if (appointment.customerId.toString().toLowerCase() !== customerId.toLowerCase()) {
+    console.error("Stripe checkout metadata customer mismatch");
+    return null;
+  }
+
+  // Return the verified appointment document.
+  return appointment;
+}
+
+// Record a completed checkout without reviving an appointment the customer cancelled.
 async function handleCompletedCheckout(session: Stripe.Checkout.Session): Promise<void> {
   // Ignore signed events that do not carry the identifiers created by this server.
   const { appointmentId, customerId } = readCheckoutMetadata(session);
@@ -82,22 +101,20 @@ async function handleCompletedCheckout(session: Stripe.Checkout.Session): Promis
     return;
   }
 
-  // Confirm that the appointment still exists before changing payment state.
-  const appointment = await AppointmentModel.findById(appointmentId);
+  // Reject signed events that do not belong to the referenced appointment.
+  const appointment = await findOwnedCheckoutAppointment(appointmentId, customerId);
   if (!appointment) {
-    console.error("Stripe checkout referenced a missing appointment");
     return;
   }
 
-  // Ensure the metadata customer still owns the appointment.
-  if (appointment.customerId.toString() !== customerId) {
-    console.error("Stripe checkout metadata customer mismatch");
-    return;
-  }
-
-  // Stripe is the only source of truth for payment and confirmation state.
+  // Stripe is the only source of truth for payment state.
   appointment.paymentStatus = "paid";
-  appointment.status = "confirmed";
+
+  // A cancellation is final, so a late payment must not reopen the slot.
+  if (appointment.status !== "cancelled") {
+    appointment.status = "confirmed";
+  }
+
   await appointment.save();
 
   // Save the paid transaction once, even if Stripe retries the event.
@@ -110,6 +127,12 @@ async function handleFailedCheckout(session: Stripe.Checkout.Session): Promise<v
   const { appointmentId, customerId } = readCheckoutMetadata(session);
   if (!appointmentId || !customerId) {
     console.error("Stripe checkout failed without valid appointment metadata");
+    return;
+  }
+
+  // Do not record transactions for appointments or owners that no longer match.
+  const appointment = await findOwnedCheckoutAppointment(appointmentId, customerId);
+  if (!appointment) {
     return;
   }
 
