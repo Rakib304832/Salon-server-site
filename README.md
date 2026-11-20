@@ -2,7 +2,7 @@
 
 REST API server for **SalonBook**, a salon appointment booking platform. The API will handle salon services, appointment requests, customer accounts, admin management, image uploads, and Stripe test payments for a separate Next.js client.
 
-> **Status:** Part 11 of 15 complete — project setup, validated environment configuration, a cached MongoDB connection, Better Auth with email/password and Google login, roles and blocked flags, JWT support, shared auth/validation/error middleware, an idempotent admin seed script, the public service catalogue, admin service management, service seed data, protected ImgBB image uploads, customer appointment booking, listing and cancellation, admin appointment management, and Stripe Checkout session creation. Webhook, user management, and statistics APIs are added in later parts.
+> **Status:** Part 12 of 15 complete — project setup, validated environment configuration, a cached MongoDB connection, Better Auth with email/password and Google login, roles and blocked flags, JWT support, shared auth/validation/error middleware, an idempotent admin seed script, the public service catalogue, admin service management, service seed data, protected ImgBB image uploads, customer appointment booking, listing and cancellation, admin appointment management, Stripe Checkout session creation, a verified Stripe webhook, and payment transaction records. User management and statistics APIs are added in later parts.
 
 ## Planned features
 
@@ -227,7 +227,25 @@ Success response:
 }
 ```
 
-The price is taken from the stored `servicePrice`, converted to cents, and never from the client. Checkout metadata carries the appointment, customer, and service IDs; the verified webhook uses that metadata in the next part. A missing appointment returns `404`, an already paid or confirmed appointment returns `409`, and a Stripe failure returns `502` without exposing credentials or raw provider errors.
+The price is taken from the stored `servicePrice`, converted to cents, and never from the client. Checkout metadata carries the appointment, customer, and service IDs; the verified webhook uses that metadata. A missing appointment returns `404`, an already paid or confirmed appointment returns `409`, and a Stripe failure returns `502` without exposing credentials or raw provider errors.
+
+## Stripe webhook and transactions
+
+Stripe posts payment events to `POST /api/payments/webhook`. This route has no session because Stripe authenticates with the `Stripe-Signature` header. The server reads the exact raw body before the JSON parser and rejects any request whose signature cannot be verified with `STRIPE_WEBHOOK_SECRET`.
+
+| Event | Server action |
+| --- | --- |
+| `checkout.session.completed` | Marks the appointment `paid` and `confirmed`, then records a `paid` transaction |
+| `checkout.session.expired` | Records a `failed` transaction without changing the appointment |
+| `checkout.session.async_payment_failed` | Records a `failed` transaction |
+
+Transaction writes are idempotent by Stripe Checkout Session ID, so webhook retries do not create duplicates. Amount and currency always come from the signed Stripe payload.
+
+| Method | Endpoint | Access | Purpose |
+| --- | --- | --- | --- |
+| `GET` | `/api/admin/transactions` | Admin | List transactions, newest first |
+
+Optional transaction filters: `status=paid|failed`, `customerId`, and `appointmentId`. Amounts are returned in the smallest currency unit, such as cents.
 
 ## Image uploads API
 
@@ -331,17 +349,21 @@ src/
     Service.ts        Salon service schema, rules, and indexes
     Appointment.ts    Booking schema and active-slot unique index
     User.ts           Minimal Better Auth user model used by appointment refs
+    Transaction.ts    Stripe payment records with session idempotency
   controllers/
     services.controller.ts            Public catalogue and admin service handlers
     appointments.controller.ts        Customer booking, listing, and cancellation
     adminAppointments.controller.ts   Admin appointment review and status changes
     payments.controller.ts            Stripe Checkout Session creation
-    uploads.controller.ts             ImgBB upload handler
+    stripeWebhook.controller.ts        Signed webhook payment processing
+    transactions.controller.ts         Admin transaction list
+    uploads.controller.ts              ImgBB upload handler
   routes/
     services.routes.ts            Public and admin service route definitions
     appointments.routes.ts        Protected customer appointment routes
     adminAppointments.routes.ts   Protected admin appointment routes
     payments.routes.ts            Protected Stripe checkout route
+    transactions.routes.ts        Protected admin transaction route
     uploads.routes.ts             Protected image upload route
   middleware/
     verifyAuth.ts     Cookie or Bearer JWT authentication with a fresh user

@@ -22,11 +22,17 @@ import { errorHandler, notFound } from "./middleware/errorHandler.js";
 // Import the shared success and error envelopes.
 import { sendError, sendSuccess } from "./utils/response.js";
 
+// Import the raw-body Stripe webhook handler.
+import { stripeWebhook } from "./controllers/stripeWebhook.controller.js";
+
 // Import the public service routes and the separate admin service listing router.
 import { adminServicesRouter, servicesRouter } from "./routes/services.routes.js";
 
 // Import the admin appointment management route.
 import { adminAppointmentsRouter } from "./routes/adminAppointments.routes.js";
+
+// Import the admin transaction list route.
+import { adminTransactionsRouter } from "./routes/transactions.routes.js";
 
 // Import the protected customer appointment route.
 import { appointmentsRouter } from "./routes/appointments.routes.js";
@@ -72,7 +78,10 @@ app.all("/api/auth/*splat", (request, response) => {
   return authHandler(request, response);
 });
 
-// Parse JSON request bodies for the application API after Better Auth has handled its own routes.
+// Verify Stripe webhooks with the exact raw bytes before any JSON parser runs.
+app.post("/api/payments/webhook", express.raw({ type: "application/json" }), stripeWebhook);
+
+// Parse JSON request bodies for the application API after Better Auth and Stripe have handled their own routes.
 app.use(express.json({ limit: "1mb" }));
 
 // Register a simple GET route at the root URL so the setup can still be tested.
@@ -128,6 +137,9 @@ app.use("/api/appointments", appointmentsRouter);
 
 // Register the protected Stripe checkout route.
 app.use("/api/payments", paymentsRouter);
+
+// Register the admin transaction list route.
+app.use("/api/admin/transactions", adminTransactionsRouter);
 
 // Register the protected ImgBB upload route.
 app.use("/api/uploads", uploadsRouter);
