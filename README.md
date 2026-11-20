@@ -2,7 +2,7 @@
 
 REST API server for **SalonBook**, a salon appointment booking platform. The API will handle salon services, appointment requests, customer accounts, admin management, image uploads, and Stripe test payments for a separate Next.js client.
 
-> **Status:** Part 5 of 15 complete — project setup, validated environment configuration, a cached MongoDB connection, Better Auth with email/password and Google login, roles and blocked flags, JWT support, shared auth/validation/error middleware, and an idempotent admin seed script. Business API features are added in later parts.
+> **Status:** Part 7 of 15 complete — project setup, validated environment configuration, a cached MongoDB connection, Better Auth with email/password and Google login, roles and blocked flags, JWT support, shared auth/validation/error middleware, an idempotent admin seed script, the public service catalogue, admin service management, and service seed data. Appointment and payment APIs are added in later parts.
 
 ## Planned features
 
@@ -84,6 +84,34 @@ All request validation errors, malformed IDs, duplicate keys, missing routes, an
 { "success": false, "message": "...", "errors": [] }
 ```
 
+## Services API
+
+The public catalogue is open to guests. Service details and every management route require authentication. All routes return the shared success or error envelope.
+
+| Method | Endpoint | Access | Purpose |
+| --- | --- | --- | --- |
+| `GET` | `/api/services` | Public | List active services with search, category filter, and price sort |
+| `GET` | `/api/services/:id` | Signed in | Read one service, including an inactive one |
+| `GET` | `/api/admin/services` | Admin | List all services, including inactive ones |
+| `POST` | `/api/services` | Admin | Create a service |
+| `PUT` | `/api/services/:id` | Admin | Update one or more service fields |
+| `PATCH` | `/api/services/:id/status` | Admin | Activate or deactivate a service |
+| `DELETE` | `/api/services/:id` | Admin | Delete a service when no active appointment uses it |
+
+Public list query parameters:
+
+- `search` matches the service name and description. The input is escaped before it becomes a MongoDB regular expression.
+- `category` accepts one of `Hair`, `Facial`, `Massage`, `Nails`, `Makeup`, `Waxing`, or `Bridal`.
+- `sort` accepts `price_asc` or `price_desc`. The default order is newest first.
+
+Example:
+
+```text
+GET /api/services?search=massage&category=Massage&sort=price_asc
+```
+
+Inactive services never appear in the public list, but a signed-in user can still open the details by ID so the client can show a **Service unavailable** message. The delete route returns `409 Conflict` while a pending or confirmed appointment still references the service.
+
 ## Admin account
 
 Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env`, then run:
@@ -93,6 +121,16 @@ npm run seed:admin
 ```
 
 The script creates the account through Better Auth when it is missing and promotes an existing account without resetting its password. Running it more than once is safe.
+
+## Service catalogue seed
+
+Load the 14 starting services across all seven categories:
+
+```bash
+npm run seed:services
+```
+
+The script reads `seed/services.json`, validates every entry, and upserts by `serviceName`, so running it more than once does not create duplicates. The sample data includes active services in every category and keeps **Hot Stone Massage** inactive so the public and admin filters can be tested.
 
 ## Required environment variables
 
@@ -124,7 +162,7 @@ Never commit the real `.env` file. The repository only includes `.env.example` w
 | `npm start` | Run the compiled server |
 | `npm run typecheck` | Check types without writing build output |
 | `npm run seed:admin` | Create the admin account or promote an existing account |
-| `npm run seed:services` | Load the starting salon services (added in Part 6) |
+| `npm run seed:services` | Load or refresh the starting salon services |
 
 ## Project structure
 
@@ -136,6 +174,12 @@ src/
     env.ts            Environment validation
     db.ts             Cached MongoDB connection
     auth.ts           Better Auth, Google login, roles, blocked flag, JWT plugin
+  models/
+    Service.ts        Salon service schema, rules, and indexes
+  controllers/
+    services.controller.ts  Public catalogue and admin service handlers
+  routes/
+    services.routes.ts      Public and admin service route definitions
   middleware/
     verifyAuth.ts     Cookie or Bearer JWT authentication with a fresh user
     checkBlocked.ts   Blocked-account guard
@@ -152,6 +196,9 @@ src/
     express.d.ts      Express req.user type augmentation
   scripts/
     seedAdmin.ts      Idempotent admin creation and promotion script
+    seedServices.ts   Idempotent service catalogue seed script
+seed/
+  services.json       Fourteen starting services across all seven categories
 ```
 
 The full structure will grow as each part of the build is completed.

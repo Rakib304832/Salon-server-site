@@ -4,11 +4,14 @@ import type { Response } from "express";
 // Import Mongoose's default export plus the filter type used by the list queries.
 import mongoose, { type QueryFilter } from "mongoose";
 
+// Import the active native database used to check appointments before deletion.
+import { getDb } from "../config/db.js";
+
 // Import the service model and its stored field type.
 import { ServiceModel, type ServiceInput } from "../models/Service.js";
 
-// Import the shared API service shape.
-import type { Service } from "../types/models.js";
+// Import the shared API service shape and narrowed status type.
+import type { Service, ServiceStatus } from "../types/models.js";
 
 // Import the category union used by the validated query string.
 import type { ServiceCategory } from "../utils/constants.js";
@@ -28,6 +31,30 @@ export interface ServiceListQuery {
 
   // Optional price ordering; the default is newest first.
   sort?: "price_asc" | "price_desc";
+}
+
+// Describe the validated body accepted by the create and update routes.
+export interface ServiceBody {
+  // Display name of the service.
+  serviceName: string;
+
+  // One of the seven salon categories.
+  category: ServiceCategory;
+
+  // Customer-facing description.
+  description: string;
+
+  // Positive price in USD.
+  price: number;
+
+  // Positive whole number of minutes.
+  duration: number;
+
+  // Valid image URL returned by ImgBB.
+  image: string;
+
+  // Optional status; new services default to active.
+  status?: ServiceStatus;
 }
 
 // Add the MongoDB identifier to a lean service document.
@@ -121,6 +148,24 @@ export const listPublicServices = asyncHandler(async (_request, response) => {
   );
 });
 
+// List every service, including inactive ones, for the admin table.
+export const listAllServices = asyncHandler(async (_request, response) => {
+  // Read the same validated query values used by the public list.
+  const query = readListQuery(response);
+
+  // Include inactive services because admins must be able to reactivate them.
+  const services = await ServiceModel.find(buildServiceFilter(query, true))
+    .sort(buildServiceSort(query.sort))
+    .lean();
+
+  // Return the complete service array inside the shared success envelope.
+  sendSuccess(
+    response,
+    services.map((service) => serializeService(service as ServiceRecord)),
+    "Services retrieved successfully",
+  );
+});
+
 // Return one service to a signed-in user, even when it is inactive.
 export const getServiceById = asyncHandler(async (request, response) => {
   // Read the validated ObjectId from the route parameters.
@@ -140,4 +185,113 @@ export const getServiceById = asyncHandler(async (request, response) => {
     serializeService(service as ServiceRecord),
     "Service retrieved successfully",
   );
+});
+
+// Create a service as an admin.
+export const createService = asyncHandler(async (request, response) => {
+  // Read the body already validated and stripped by the route schema.
+  const body = request.body as ServiceBody;
+
+  // Create the service with active as the default status.
+  const created = await ServiceModel.create({
+    ...body,
+    status: body.status ?? "active",
+  });
+
+  // Return the created service with 201 Created.
+  sendSuccess(
+    response,
+    serializeService(created.toObject() as ServiceRecord),
+    "Service created successfully",
+    201,
+  );
+});
+
+// Replace the editable fields of an existing service.
+export const updateService = asyncHandler(async (request, response) => {
+  // Read the validated ObjectId and the partial validated body.
+  const { id } = request.params;
+  const body = request.body as Partial<ServiceBody>;
+
+  // Apply the provided fields and run the schema validators on the result.
+  const updated = await ServiceModel.findByIdAndUpdate(
+    id,
+    { $set: body },
+    { new: true, runValidators: true },
+  ).lean();
+
+  // Return a clear 404 when the service does not exist.
+  if (!updated) {
+    throw ApiError.notFound("Service not found");
+  }
+
+  // Return the updated service inside the shared success envelope.
+  sendSuccess(
+    response,
+    serializeService(updated as ServiceRecord),
+    "Service updated successfully",
+  );
+});
+
+// Activate or deactivate a service without changing its other fields.
+export const updateServiceStatus = asyncHandler(async (request, response) => {
+  // Read the validated ObjectId and status body.
+  const { id } = request.params;
+  const { status } = request.body as { status: ServiceStatus };
+
+  // Update only the status field so a status toggle cannot overwrite service details.
+  const updated = await ServiceModel.findByIdAndUpdate(
+    id,
+    { $set: { status } },
+    { new: true, runValidators: true },
+  ).lean();
+
+  // Return a clear 404 when the service does not exist.
+  if (!updated) {
+    throw ApiError.notFound("Service not found");
+  }
+
+  // Return the updated service inside the shared success envelope.
+  sendSuccess(
+    response,
+    serializeService(updated as ServiceRecord),
+    "Service status updated successfully",
+  );
+});
+
+// Delete a service only when no pending or confirmed appointment depends on it.
+export const deleteService = asyncHandler(async (request, response) => {
+  // Read the validated ObjectId from the route parameters.
+  const { id } = request.params;
+
+  // Normalise the identifier once for the model and native-driver queries.
+  const serviceId = new mongoose.Types.ObjectId(String(id));
+
+  // Confirm the service exists before checking its appointment history.
+  const service = await ServiceModel.findById(serviceId).lean();
+
+  // Return a clear 404 when the service does not exist.
+  if (!service) {
+    throw ApiError.notFound("Service not found");
+  }
+
+  // Count appointments that would become orphaned by this deletion.
+  // The appointments collection is created by the booking model in Part 9.
+  const activeAppointments = await getDb().collection("appointments").countDocuments({
+    serviceId,
+    status: { $in: ["pending", "confirmed"] },
+  });
+
+  // Refuse the deletion while active bookings still reference the service.
+  if (activeAppointments > 0) {
+    throw ApiError.conflict(
+      "This service has pending or confirmed appointments and cannot be deleted",
+    );
+  }
+
+  // Remove the service now that no active appointment depends on it.
+  await ServiceModel.deleteOne({ _id: serviceId });
+
+  // Return the deleted identifier inside the shared success envelope.
+  sendSuccess(response, { _id: id }, "Service deleted successfully");
 });
