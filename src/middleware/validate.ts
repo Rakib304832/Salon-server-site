@@ -1,8 +1,13 @@
 // Import the Express middleware type.
 import type { RequestHandler } from "express";
 
-// Import the Zod base type used by each validation schema.
-import type { ZodType } from "zod";
+// Import Zod and the base schema type used by each validation schema.
+import { z, type ZodType } from "zod";
+
+// Accept only the 24-character hexadecimal identifiers MongoDB can store.
+export const objectIdSchema = z
+  .string()
+  .regex(/^[0-9a-fA-F]{24}$/, "Invalid ID format");
 
 // Describe which request parts a route wants to validate.
 export interface ValidationSchemas {

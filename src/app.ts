@@ -19,6 +19,9 @@ import { getAuth } from "./config/auth.js";
 // Import the shared 404 and error handlers placed after every route.
 import { errorHandler, notFound } from "./middleware/errorHandler.js";
 
+// Import the public service routes.
+import { servicesRouter } from "./routes/services.routes.js";
+
 // Create the Express application instance that will receive every request.
 const app = express();
 
@@ -92,6 +95,9 @@ app.get("/api/health", (_request, response) => {
       : "SalonBook API is running but the database is unavailable",
   });
 });
+
+// Register the public service routes before the fallback handlers.
+app.use("/api/services", servicesRouter);
 
 // Return a consistent JSON error for requests that matched no route.
 app.use(notFound);
