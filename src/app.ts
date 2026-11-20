@@ -34,6 +34,12 @@ import { adminAppointmentsRouter } from "./routes/adminAppointments.routes.js";
 // Import the admin transaction list route.
 import { adminTransactionsRouter } from "./routes/transactions.routes.js";
 
+// Import the admin user management route.
+import { adminUsersRouter } from "./routes/adminUsers.routes.js";
+
+// Import the signed-in profile route.
+import { usersRouter } from "./routes/users.routes.js";
+
 // Import the protected customer appointment route.
 import { appointmentsRouter } from "./routes/appointments.routes.js";
 
@@ -140,6 +146,12 @@ app.use("/api/payments", paymentsRouter);
 
 // Register the admin transaction list route.
 app.use("/api/admin/transactions", adminTransactionsRouter);
+
+// Register the admin user management route.
+app.use("/api/admin/users", adminUsersRouter);
+
+// Register the signed-in profile route.
+app.use("/api/users", usersRouter);
 
 // Register the protected ImgBB upload route.
 app.use("/api/uploads", uploadsRouter);

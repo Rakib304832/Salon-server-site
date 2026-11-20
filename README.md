@@ -2,7 +2,7 @@
 
 REST API server for **SalonBook**, a salon appointment booking platform. The API will handle salon services, appointment requests, customer accounts, admin management, image uploads, and Stripe test payments for a separate Next.js client.
 
-> **Status:** Part 12 of 15 complete — project setup, validated environment configuration, a cached MongoDB connection, Better Auth with email/password and Google login, roles and blocked flags, JWT support, shared auth/validation/error middleware, an idempotent admin seed script, the public service catalogue, admin service management, service seed data, protected ImgBB image uploads, customer appointment booking, listing and cancellation, admin appointment management, Stripe Checkout session creation, a verified Stripe webhook, and payment transaction records. User management and statistics APIs are added in later parts.
+> **Status:** Part 13 of 15 complete — project setup, validated environment configuration, a cached MongoDB connection, Better Auth with email/password and Google login, roles and blocked flags, JWT support, shared auth/validation/error middleware, an idempotent admin seed script, the public service catalogue, admin service management, service seed data, protected ImgBB image uploads, customer appointment booking, listing and cancellation, admin appointment management, Stripe Checkout session creation, a verified Stripe webhook, payment transaction records, customer profiles, and admin user management. Statistics and final hardening are added in later parts.
 
 ## Planned features
 
@@ -247,6 +247,22 @@ Transaction writes are idempotent by Stripe Checkout Session ID, so webhook retr
 
 Optional transaction filters: `status=paid|failed`, `customerId`, and `appointmentId`. Amounts are returned in the smallest currency unit, such as cents.
 
+## Profile and admin user API
+
+Signed-in customers and admins can read and update their own profile. Admin routes can list users and change another account's blocked state or role. All routes use `verifyAuth → checkBlocked → verifyRole(...)`.
+
+| Method | Endpoint | Access | Purpose |
+| --- | --- | --- | --- |
+| `GET` | `/api/users/me` | Signed in, not blocked | Read the current safe profile |
+| `PATCH` | `/api/users/me` | Signed in, not blocked | Update `name`, `phone`, or `image` |
+| `GET` | `/api/admin/users` | Admin | List users with optional filters |
+| `PATCH` | `/api/admin/users/:id/block` | Admin | Block or unblock another user |
+| `PATCH` | `/api/admin/users/:id/role` | Admin | Promote or demote another user |
+
+Profile updates accept at least one of `name`, `phone`, or `image`. An empty string clears `phone` or `image`. The body is validated to remove `role`, `email`, and `isBlocked`, so these server-owned values cannot be changed by a customer. Admin user filters are `search`, `role=customer|admin`, and `isBlocked=true|false`.
+
+An administrator cannot block or change the role of their own account, and the final admin account cannot be demoted. User responses contain only `id`, `name`, `email`, `image`, `role`, `isBlocked`, and `phone`; password hashes and session records are never returned.
+
 ## Image uploads API
 
 Authenticated users can upload service images and profile images through the server. The ImgBB API key stays in the server environment and is never returned to the client. Protected routes use `verifyAuth → checkBlocked → verifyRole("customer", "admin")` so both customer and admin accounts can upload images.
@@ -357,6 +373,7 @@ src/
     payments.controller.ts            Stripe Checkout Session creation
     stripeWebhook.controller.ts        Signed webhook payment processing
     transactions.controller.ts         Admin transaction list
+    users.controller.ts                 Profile and admin user management
     uploads.controller.ts              ImgBB upload handler
   routes/
     services.routes.ts            Public and admin service route definitions
@@ -364,6 +381,8 @@ src/
     adminAppointments.routes.ts   Protected admin appointment routes
     payments.routes.ts            Protected Stripe checkout route
     transactions.routes.ts        Protected admin transaction route
+    users.routes.ts               Protected customer profile routes
+    adminUsers.routes.ts          Protected admin user routes
     uploads.routes.ts             Protected image upload route
   middleware/
     verifyAuth.ts     Cookie or Bearer JWT authentication with a fresh user
