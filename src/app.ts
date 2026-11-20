@@ -31,6 +31,9 @@ import { adminAppointmentsRouter } from "./routes/adminAppointments.routes.js";
 // Import the protected customer appointment route.
 import { appointmentsRouter } from "./routes/appointments.routes.js";
 
+// Import the protected Stripe checkout route.
+import { paymentsRouter } from "./routes/payments.routes.js";
+
 // Import the protected image upload route.
 import { uploadsRouter } from "./routes/uploads.routes.js";
 
@@ -122,6 +125,9 @@ app.use("/api/admin/appointments", adminAppointmentsRouter);
 
 // Register the protected customer appointment route.
 app.use("/api/appointments", appointmentsRouter);
+
+// Register the protected Stripe checkout route.
+app.use("/api/payments", paymentsRouter);
 
 // Register the protected ImgBB upload route.
 app.use("/api/uploads", uploadsRouter);

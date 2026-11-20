@@ -2,7 +2,7 @@
 
 REST API server for **SalonBook**, a salon appointment booking platform. The API will handle salon services, appointment requests, customer accounts, admin management, image uploads, and Stripe test payments for a separate Next.js client.
 
-> **Status:** Part 10 of 15 complete — project setup, validated environment configuration, a cached MongoDB connection, Better Auth with email/password and Google login, roles and blocked flags, JWT support, shared auth/validation/error middleware, an idempotent admin seed script, the public service catalogue, admin service management, service seed data, protected ImgBB image uploads, customer appointment booking, listing and cancellation, and admin appointment management. Payment, user management, and statistics APIs are added in later parts.
+> **Status:** Part 11 of 15 complete — project setup, validated environment configuration, a cached MongoDB connection, Better Auth with email/password and Google login, roles and blocked flags, JWT support, shared auth/validation/error middleware, an idempotent admin seed script, the public service catalogue, admin service management, service seed data, protected ImgBB image uploads, customer appointment booking, listing and cancellation, admin appointment management, and Stripe Checkout session creation. Webhook, user management, and statistics APIs are added in later parts.
 
 ## Planned features
 
@@ -200,6 +200,35 @@ Supported list filters:
 
 The status route accepts only `confirmed` or `cancelled`. Cancelled appointments cannot be reopened, and paid appointments cannot be cancelled because refunds are handled outside this API. Both restrictions return `409`.
 
+## Stripe checkout API
+
+Customers can start a Stripe Checkout Session for their own unpaid pending appointment. The route uses `verifyAuth → checkBlocked → verifyRole("customer")`.
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `POST` | `/api/payments/create-checkout-session` | Create a hosted Stripe payment page |
+
+Request:
+
+```json
+{ "appointmentId": "65f0a1b2c3d4e5f607182931" }
+```
+
+Success response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "url": "https://checkout.stripe.com/c/pay/cs_test_...",
+    "sessionId": "cs_test_..."
+  },
+  "message": "Checkout session created successfully"
+}
+```
+
+The price is taken from the stored `servicePrice`, converted to cents, and never from the client. Checkout metadata carries the appointment, customer, and service IDs; the verified webhook uses that metadata in the next part. A missing appointment returns `404`, an already paid or confirmed appointment returns `409`, and a Stripe failure returns `502` without exposing credentials or raw provider errors.
+
 ## Image uploads API
 
 Authenticated users can upload service images and profile images through the server. The ImgBB API key stays in the server environment and is never returned to the client. Protected routes use `verifyAuth → checkBlocked → verifyRole("customer", "admin")` so both customer and admin accounts can upload images.
@@ -297,6 +326,7 @@ src/
     env.ts            Environment validation
     db.ts             Cached MongoDB connection
     auth.ts           Better Auth, Google login, roles, blocked flag, JWT plugin
+    stripe.ts         Server-only Stripe client
   models/
     Service.ts        Salon service schema, rules, and indexes
     Appointment.ts    Booking schema and active-slot unique index
@@ -305,11 +335,13 @@ src/
     services.controller.ts            Public catalogue and admin service handlers
     appointments.controller.ts        Customer booking, listing, and cancellation
     adminAppointments.controller.ts   Admin appointment review and status changes
+    payments.controller.ts            Stripe Checkout Session creation
     uploads.controller.ts             ImgBB upload handler
   routes/
     services.routes.ts            Public and admin service route definitions
     appointments.routes.ts        Protected customer appointment routes
     adminAppointments.routes.ts   Protected admin appointment routes
+    payments.routes.ts            Protected Stripe checkout route
     uploads.routes.ts             Protected image upload route
   middleware/
     verifyAuth.ts     Cookie or Bearer JWT authentication with a fresh user
