@@ -15,6 +15,7 @@ export const ALLOWED_IMAGE_MIME_TYPES = [
   "image/jpeg",
   "image/png",
   "image/webp",
+  "image/avif",
 ] as const;
 
 // Use a set for constant-time membership checks in the file filter.

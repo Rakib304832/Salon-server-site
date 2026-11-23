@@ -16,7 +16,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { sendSuccess } from "../utils/response.js";
 
 // Describe the Better Auth user fields this API reads and writes.
-interface UserDocument {
+export interface UserDocument {
   // Better Auth user identifier.
   _id: ObjectId;
 
@@ -77,7 +77,7 @@ function escapeRegex(value: string): string {
 }
 
 // Convert a stored Better Auth document into the shared safe user shape.
-function serializeUser(user: UserDocument): User {
+export function serializeUser(user: UserDocument): User {
   return {
     id: user._id.toString(),
     name: user.name,
@@ -264,4 +264,21 @@ export const updateUserRole = asyncHandler(async (request, response) => {
 
   // Return the sanitised user inside the success envelope.
   sendSuccess(response, serializeUser(updated), "User role updated successfully");
+});
+
+// Return one registered customer's safe details for the admin user table.
+export const getUserById = asyncHandler(async (request, response) => {
+  // Read the validated identifier from the route parameter.
+  const { id } = request.params;
+
+  // Look up the Better Auth user document by identifier.
+  const user = await userCollection().findOne({ _id: new ObjectId(String(id)) });
+
+  // Return a clear 404 when the account does not exist.
+  if (!user) {
+    throw ApiError.notFound("User not found");
+  }
+
+  // Return only safe fields, never a password hash or session record.
+  sendSuccess(response, serializeUser(user), "User retrieved successfully");
 });

@@ -12,6 +12,7 @@ import { verifyRole } from "../middleware/verifyRole.js";
 
 // Import the admin user handlers.
 import {
+  getUserById,
   listUsers,
   updateUserBlock,
   updateUserRole,
@@ -50,6 +51,16 @@ adminUsersRouter.get(
   verifyRole("admin"),
   validate({ query: userListQuerySchema }),
   listUsers,
+);
+
+// Return one user's safe details.
+adminUsersRouter.get(
+  "/:id",
+  verifyAuth,
+  checkBlocked,
+  verifyRole("admin"),
+  validate({ params: userIdParamsSchema }),
+  getUserById,
 );
 
 // Block or unblock another user.

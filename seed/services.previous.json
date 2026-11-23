@@ -1,0 +1,128 @@
+[
+  {
+    "serviceName": "Signature Haircut & Styling",
+    "category": "Haircut & Styling",
+    "description": "A consultation-led haircut with a wash, precision cut, and a polished blow-dry finish.",
+    "price": 35,
+    "duration": 45,
+    "image": "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=800&q=80",
+    "status": "active"
+  },
+  {
+    "serviceName": "Keratin Smoothing Treatment",
+    "category": "Hair Treatment",
+    "description": "A salon keratin treatment that reduces frizz and leaves hair smooth, glossy, and easier to style.",
+    "price": 120,
+    "duration": 120,
+    "image": "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=800&q=80",
+    "status": "active"
+  },
+  {
+    "serviceName": "Glow Facial",
+    "category": "Facial & Skincare",
+    "description": "A gentle cleanse, exfoliation, and hydrating mask designed to refresh tired skin and restore glow.",
+    "price": 60,
+    "duration": 60,
+    "image": "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=800&q=80",
+    "status": "active"
+  },
+  {
+    "serviceName": "Hydra Deep Clean Facial",
+    "category": "Facial & Skincare",
+    "description": "A deep-cleansing facial with steam, extraction, and a calming mask for congested or dull skin.",
+    "price": 85,
+    "duration": 75,
+    "image": "https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?auto=format&fit=crop&w=800&q=80",
+    "status": "active"
+  },
+  {
+    "serviceName": "Relaxing Swedish Massage",
+    "category": "Spa & Massage",
+    "description": "A full-body Swedish massage with warm oil and gentle pressure to release tension and improve circulation.",
+    "price": 70,
+    "duration": 60,
+    "image": "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80",
+    "status": "active"
+  },
+  {
+    "serviceName": "Hot Stone Massage",
+    "category": "Spa & Massage",
+    "description": "A warming massage using smooth heated stones to relax deep muscle tension throughout the body.",
+    "price": 90,
+    "duration": 90,
+    "image": "https://images.unsplash.com/photo-1600334129128-685c5582fd35?auto=format&fit=crop&w=800&q=80",
+    "status": "inactive"
+  },
+  {
+    "serviceName": "Classic Manicure",
+    "category": "Manicure & Pedicure",
+    "description": "A tidy cuticle treatment, nail shaping, hand massage, and a classic polish in your chosen shade.",
+    "price": 25,
+    "duration": 30,
+    "image": "https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=800&q=80",
+    "status": "active"
+  },
+  {
+    "serviceName": "Gel Nail Art",
+    "category": "Manicure & Pedicure",
+    "description": "Long-lasting gel colour with a custom nail-art design chosen during your appointment consultation.",
+    "price": 45,
+    "duration": 60,
+    "image": "https://images.unsplash.com/photo-1519014816548-bf5fe059798b?auto=format&fit=crop&w=800&q=80",
+    "status": "active"
+  },
+  {
+    "serviceName": "Soft Glam Makeup",
+    "category": "Makeup",
+    "description": "A natural soft-glam look with skin prep, long-wear base, defined eyes, and a flattering lip finish.",
+    "price": 55,
+    "duration": 60,
+    "image": "https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?auto=format&fit=crop&w=800&q=80",
+    "status": "active"
+  },
+  {
+    "serviceName": "Evening Party Makeup",
+    "category": "Makeup",
+    "description": "A bold evening makeup service with sculpted eyes, lashes, and a statement lip for special events.",
+    "price": 75,
+    "duration": 75,
+    "image": "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=800&q=80",
+    "status": "active"
+  },
+  {
+    "serviceName": "Full Arm Waxing",
+    "category": "Waxing",
+    "description": "Smooth both arms from shoulder to wrist with a warm wax treatment and a soothing after-care lotion.",
+    "price": 30,
+    "duration": 30,
+    "image": "https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?auto=format&fit=crop&w=800&q=80",
+    "status": "active"
+  },
+  {
+    "serviceName": "Full Leg Waxing",
+    "category": "Waxing",
+    "description": "A complete leg wax from thigh to ankle with gentle after-care to leave skin smooth and calm.",
+    "price": 45,
+    "duration": 45,
+    "image": "https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?auto=format&fit=crop&w=800&q=80",
+    "status": "active"
+  },
+  {
+    "serviceName": "Bridal Hair & Makeup Package",
+    "category": "Bridal",
+    "description": "A complete wedding-day package with a bridal hairstyle, long-wear makeup, and a final touch-up kit.",
+    "price": 250,
+    "duration": 180,
+    "image": "https://images.unsplash.com/photo-1594736797933-d0501ba2fe65?auto=format&fit=crop&w=800&q=80",
+    "status": "active"
+  },
+  {
+    "serviceName": "Bridal Trial Session",
+    "category": "Bridal",
+    "description": "A pre-wedding trial to test your bridal hair and makeup look, with adjustments before the big day.",
+    "price": 95,
+    "duration": 90,
+    "image": "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=800&q=80",
+    "status": "active"
+  }
+]

@@ -37,6 +37,15 @@ export interface AppointmentInput {
   // Appointment lifecycle state.
   status: AppointmentStatus;
 
+  // Stripe Checkout Session currently offered to the customer, when one exists.
+  checkoutSessionId?: string;
+
+  // Expiry time of the Stripe Checkout Session, used to avoid returning stale links.
+  checkoutSessionExpiresAt?: Date;
+
+  // Number of checkout attempts, used as a stable Stripe idempotency key suffix.
+  checkoutAttempt?: number;
+
   // Date the appointment request was created.
   createdAt: Date;
 }
@@ -113,6 +122,24 @@ const appointmentSchema = new mongoose.Schema<AppointmentInput>(
       default: "pending",
     },
 
+    // Remember the open Checkout Session so repeated clicks reuse the same link.
+    checkoutSessionId: {
+      type: String,
+      trim: true,
+    },
+
+    // Stop reusing a Checkout Session after Stripe expires it.
+    checkoutSessionExpiresAt: {
+      type: Date,
+    },
+
+    // Increment on each new Checkout Session to keep Stripe idempotency keys unique.
+    checkoutAttempt: {
+      type: Number,
+      min: [0, "Checkout attempt cannot be negative"],
+      default: 0,
+    },
+
     // Record the request time once for deterministic sorting.
     createdAt: {
       type: Date,
@@ -135,13 +162,14 @@ appointmentSchema.index({ customerId: 1, createdAt: -1 });
 // Support admin lookups by service and appointment date in later parts.
 appointmentSchema.index({ serviceId: 1, appointmentDate: 1 });
 
-// Prevent two active bookings for the same service, date, and slot.
+// Prevent two active bookings for the same salon date and time slot.
 // Cancelled records leave the partial index, so their slot becomes reusable.
+// The name is new so deployments can build this index alongside any older per-service index.
 appointmentSchema.index(
-  { serviceId: 1, appointmentDate: 1, timeSlot: 1 },
+  { appointmentDate: 1, timeSlot: 1 },
   {
     unique: true,
-    name: "unique_active_service_slot",
+    name: "unique_active_salon_slot",
     partialFilterExpression: { status: { $in: ["pending", "confirmed"] } },
   },
 );

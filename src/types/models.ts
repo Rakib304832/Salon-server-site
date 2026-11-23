@@ -45,7 +45,7 @@ export interface Service {
   // Display name of the service.
   serviceName: string;
 
-  // One of the seven salon categories.
+  // One of the supported salon categories.
   category: string;
 
   // Full customer-facing description.
@@ -98,6 +98,9 @@ export interface Appointment {
 
   // ISO timestamp used as the request date.
   createdAt: string;
+
+  // Safe customer details added by admin appointment responses.
+  customerInfo?: User;
 }
 
 // Describe a payment transaction returned by the admin transactions API.
@@ -125,6 +128,15 @@ export interface Transaction {
 
   // ISO timestamp used as the transaction date.
   createdAt: string;
+
+  // Safe customer details added by the admin transaction response.
+  customerInfo?: User;
+
+  // Basic service details added by the admin transaction response.
+  serviceInfo?: Service;
+
+  // Appointment date copied from the related booking for admin display.
+  appointmentDate?: string;
 }
 
 // Describe the popular-service summary shown on the admin dashboard.

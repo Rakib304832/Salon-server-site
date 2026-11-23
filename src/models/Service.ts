@@ -12,7 +12,7 @@ export interface ServiceInput {
   // Display name shown on the public service cards.
   serviceName: string;
 
-  // One of the seven salon categories.
+  // One of the supported salon categories.
   category: ServiceCategory;
 
   // Customer-facing description of what the service includes.
@@ -51,7 +51,7 @@ const serviceSchema = new mongoose.Schema<ServiceInput>(
       required: [true, "Category is required"],
       enum: {
         values: SERVICE_CATEGORIES,
-        message: "Category must be one of the seven salon categories",
+        message: "Category must be one of the supported salon categories",
       },
     },
 

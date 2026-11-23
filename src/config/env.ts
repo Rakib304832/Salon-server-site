@@ -16,8 +16,13 @@ const optionalEmail = z.preprocess(
 const optionalPassword = z.preprocess(
   // Convert an empty string or whitespace-only value into undefined.
   (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
-  // Enforce the minimum password length required by the assignment.
-  z.string().min(6, "ADMIN_PASSWORD must be at least 6 characters").optional(),
+  // Enforce the same password rules the sign-up endpoint enforces.
+  z
+    .string()
+    .min(6, "ADMIN_PASSWORD must be at least 6 characters")
+    .regex(/[A-Z]/, "ADMIN_PASSWORD must contain at least one uppercase letter")
+    .regex(/[a-z]/, "ADMIN_PASSWORD must contain at least one lowercase letter")
+    .optional(),
 );
 
 // Validate a public URL and remove any trailing slashes so URL joins stay predictable.
@@ -26,6 +31,18 @@ const urlWithoutTrailingSlash = z
   .url("Must be a valid URL including http:// or https://")
   // Remove one or more trailing slashes from the validated value.
   .transform((value) => value.replace(/\/+$/, ""));
+
+// Accept an optional comma-separated list of extra client origins for preview deployments.
+const extraClientUrlsSchema = z
+  // Treat an unset or empty value as an empty list.
+  .string()
+  .default("")
+  // Split on commas and trim every entry.
+  .transform((value) =>
+    value.trim() === "" ? [] : value.split(",").map((item) => item.trim()),
+  )
+  // Validate and normalise each origin with the same rule as CLIENT_URL.
+  .pipe(z.array(urlWithoutTrailingSlash));
 
 // Describe every environment variable, its type, and its validation rules.
 const envSchema = z.object({
@@ -50,16 +67,22 @@ const envSchema = z.object({
   // Require the public client URL used for CORS, trusted origins, and Stripe return URLs.
   CLIENT_URL: urlWithoutTrailingSlash,
 
+  // Accept additional client origins such as preview deployments and www aliases.
+  CLIENT_URLS: extraClientUrlsSchema,
+
   // Require the Google OAuth client identifier.
   GOOGLE_CLIENT_ID: z.string().min(1, "GOOGLE_CLIENT_ID is required"),
 
   // Require the Google OAuth client secret, which must stay on the server.
   GOOGLE_CLIENT_SECRET: z.string().min(1, "GOOGLE_CLIENT_SECRET is required"),
 
-  // Require a Stripe test-mode secret key and refuse accidental live keys.
+  // Accept Stripe test-mode and live-mode secret keys; both are kept server-only.
   STRIPE_SECRET_KEY: z
     .string()
-    .startsWith("sk_test_", "STRIPE_SECRET_KEY must be a Stripe test-mode key starting with sk_test_"),
+    .regex(
+      /^sk_(test|live)_/,
+      "STRIPE_SECRET_KEY must start with sk_test_ or sk_live_",
+    ),
 
   // Require the Stripe webhook signing secret.
   STRIPE_WEBHOOK_SECRET: z
@@ -94,6 +117,12 @@ if (!parsedEnv.success) {
 
 // Export the validated and converted values for the rest of the server.
 export const env = parsedEnv.data;
+
+// Return every allowed browser origin, with duplicates removed.
+export function getClientOrigins(): string[] {
+  // Keep CLIENT_URL first because Stripe redirects and docs use that value.
+  return [...new Set([env.CLIENT_URL, ...env.CLIENT_URLS])];
+}
 
 // Export the inferred environment type so other modules can reuse it.
 export type Env = typeof env;

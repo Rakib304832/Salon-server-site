@@ -2,7 +2,7 @@
 
 REST API server for **SalonBook**, a salon appointment booking platform. The API will handle salon services, appointment requests, customer accounts, admin management, image uploads, and Stripe test payments for a separate Next.js client.
 
-> **Status:** Part 15 of 15 complete — project setup, validated environment configuration, a cached MongoDB connection, Better Auth with email/password and Google login, roles and blocked flags, JWT support, shared auth/validation/error middleware, an idempotent admin seed script, the public service catalogue, admin service management, service seed data, protected ImgBB image uploads, customer appointment booking, listing and cancellation, admin appointment management, Stripe Checkout session creation, a verified Stripe webhook, payment transaction records, customer profiles, admin user management, dashboard statistics, and final response hardening. The server is complete and verified with `npm run typecheck` and `npm run build`.
+> **Status:** Complete. The server includes validated environment configuration, a cached MongoDB connection, Better Auth with email/password and Google login, server-enforced password rules, roles and blocked flags, JWT support, shared auth/validation/error middleware, an idempotent admin seed script, the public service catalogue, admin service management with direct image upload, service seed data, protected ImgBB image uploads, customer appointment booking, stats, details, listing and cancellation, admin appointment details and management, Stripe Checkout for confirmed appointments, a verified Stripe webhook, checkout status verification, transaction records, customer profiles, admin user details and management, dashboard statistics, and final response hardening. Verified with `npm run typecheck` and `npm run build`.
 
 ## Implemented features
 
@@ -70,7 +70,7 @@ npm start
 
 Better Auth is mounted at `/api/auth` and handles sign-up, sign-in, Google login, sessions, JWT access, and logout.
 
-- Email and password sign-up is enabled with a six-character minimum password length.
+- Email and password sign-up requires at least six characters, one uppercase letter, and one lowercase letter. The rules are enforced by a Better Auth `before` hook, so they cannot be bypassed by calling the API directly.
 - New accounts always receive the `customer` role and `isBlocked: false`.
 - `role` and `isBlocked` are marked as server-only fields, so a sign-up or profile request cannot set or change them.
 - The JWT plugin provides `/api/auth/token` and `/api/auth/jwks` for Bearer-token verification.
@@ -115,7 +115,7 @@ The public catalogue is open to guests. Service details and every management rou
 Public list query parameters:
 
 - `search` matches the service name and description. The input is escaped before it becomes a MongoDB regular expression.
-- `category` accepts one of `Hair`, `Facial`, `Massage`, `Nails`, `Makeup`, `Waxing`, or `Bridal`.
+- `category` accepts `Haircut & Styling`, `Hair Coloring`, `Hair Treatment`, `Facial & Skincare`, `Makeup`, `Manicure & Pedicure`, `Spa & Massage`, `Waxing`, or `Bridal`.
 - `sort` accepts `price_asc` or `price_desc`. The default order is newest first.
 
 Example:
@@ -126,6 +126,8 @@ GET /api/services?search=massage&category=Massage&sort=price_asc
 
 Inactive services never appear in the public list, but a signed-in user can still open the details by ID so the client can show a **Service unavailable** message. The delete route returns `409 Conflict` while a pending or confirmed appointment still references the service. Service status is changed only through `PATCH /api/services/:id/status`; create and update bodies ignore any client-supplied `status` value.
 
+`POST /api/services` and `PUT /api/services/:id` accept either JSON with an `image` URL or `multipart/form-data` with an `image` file. When a file is sent, the server uploads it to ImgBB and stores the returned URL, so the admin form never needs an ImgBB key. Multipart upload attempts are rate limited; JSON-only edits are not.
+
 ## Appointments API
 
 Customers can request, list, and cancel their own appointments. Every route uses `verifyAuth → checkBlocked → verifyRole("customer")` in that order. Admins do not book appointments through these customer routes.
@@ -133,7 +135,9 @@ Customers can request, list, and cancel their own appointments. Every route uses
 | Method | Endpoint | Access | Purpose |
 | --- | --- | --- | --- |
 | `POST` | `/api/appointments` | Customer | Request a new appointment |
+| `GET` | `/api/appointments/stats` | Customer | Return the customer's dashboard counts |
 | `GET` | `/api/appointments/mine` | Customer | List only the signed-in customer's appointments |
+| `GET` | `/api/appointments/:id` | Customer | Read one of the customer's own appointments |
 | `PATCH` | `/api/appointments/:id/cancel` | Customer | Cancel the customer's own pending appointment |
 
 The create route accepts only these fields:
@@ -191,7 +195,7 @@ Success response:
 
 Booking rules:
 
-- Two `pending` or `confirmed` appointments cannot share the same `serviceId`, `appointmentDate`, and `timeSlot`. A duplicate returns `409` with code `SLOT_ALREADY_BOOKED`.
+- Two `pending` or `confirmed` appointments cannot share the same salon-wide `appointmentDate` and `timeSlot`, even when the services differ. A duplicate returns `409` with code `SLOT_ALREADY_BOOKED`.
 - Cancelling an appointment removes it from the active-slot index, so the same date and slot can be booked again.
 - The list route returns only the signed-in customer's records, newest first, with current service details.
 - The cancel route returns `404` for another customer's appointment, `409` for a paid appointment, and `409` for any appointment that is no longer `pending`.
@@ -203,7 +207,8 @@ Administrators can review and manage every appointment. Both routes use `verifyA
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
 | `GET` | `/api/admin/appointments` | List all appointments with optional filters |
-| `PATCH` | `/api/admin/appointments/:id/status` | Confirm a pending request or cancel an unpaid appointment |
+| `GET` | `/api/admin/appointments/:id` | Read one appointment with service and customer details |
+| `PATCH` | `/api/admin/appointments/:id/status` | Confirm a pending request or cancel a pending/confirmed appointment |
 
 Supported list filters:
 
@@ -212,15 +217,16 @@ Supported list filters:
 - `appointmentDate` — exact date in `YYYY-MM-DD` format
 - `serviceId` and `customerId` — exact 24-character MongoDB IDs
 
-The status route accepts only `confirmed` or `cancelled`. Cancelled appointments cannot be reopened, and paid appointments cannot be cancelled because refunds are handled outside this API. Both restrictions return `409`.
+The status route accepts only `confirmed` or `cancelled`. Only a `pending` appointment can be confirmed; a confirmed appointment cannot be confirmed again. Both `pending` and `confirmed` appointments can be cancelled, including paid ones, because refunds are handled outside this API. Cancelled appointments cannot be reopened. All invalid transitions return `409`. Appointment responses include safe customer information (`customerInfo`) alongside the service details.
 
 ## Stripe checkout API
 
-Customers can start a Stripe Checkout Session for their own unpaid pending appointment. The route uses `verifyAuth → checkBlocked → verifyRole("customer")`.
+Customers can start a Stripe Checkout Session only for their own **confirmed, unpaid** appointment. Pending and cancelled appointments cannot be paid. The routes use `verifyAuth → checkBlocked → verifyRole("customer")`.
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
 | `POST` | `/api/payments/create-checkout-session` | Create a hosted Stripe payment page |
+| `GET` | `/api/payments/session/:sessionId` | Verify a checkout result after the success redirect |
 
 Request:
 
@@ -241,7 +247,9 @@ Success response:
 }
 ```
 
-The price is taken from the stored `servicePrice`, converted to cents, and never from the client. Checkout metadata carries the appointment, customer, and service IDs; the verified webhook uses that metadata. A missing appointment returns `404`, an already paid or confirmed appointment returns `409`, and a Stripe failure returns `502` without exposing credentials or raw provider errors.
+The price is taken from the stored `servicePrice`, converted to cents, and never from the client. Checkout metadata carries the appointment, customer, and service IDs; the verified webhook uses that metadata. A missing appointment returns `404`, a pending/cancelled/paid appointment returns `409`, and a Stripe failure returns `502` without exposing credentials or raw provider errors.
+
+The session status endpoint returns the webhook-created transaction and appointment state for `session_id` in the success URL. It returns `404` with code `PAYMENT_NOT_CONFIRMED` until the verified webhook has recorded the payment, so the client can retry instead of trusting the redirect.
 
 ## Stripe webhook and transactions
 
@@ -249,17 +257,36 @@ Stripe posts payment events to `POST /api/payments/webhook`. This route has no s
 
 | Event | Server action |
 | --- | --- |
-| `checkout.session.completed` | Marks the appointment `paid` and, unless it was cancelled, `confirmed`, then records a `paid` transaction |
+| `checkout.session.completed` | Marks the appointment `paid` only when it is still `confirmed`, `payment_status` is `paid`, and the amount matches, then records a `paid` transaction |
+| `checkout.session.async_payment_succeeded` | Same handling as a completed paid session |
 | `checkout.session.expired` | Records a `failed` transaction without changing the appointment |
 | `checkout.session.async_payment_failed` | Records a `failed` transaction |
 
-Transaction writes are idempotent by Stripe Checkout Session ID, so webhook retries do not create duplicates. Amount and currency always come from the signed Stripe payload.
+The webhook never changes the appointment lifecycle status. Admin confirmation happens before payment, and a late payment cannot reopen a cancelled appointment.
+
+Transaction writes are idempotent by Stripe Checkout Session ID, so webhook retries do not create duplicates. Amount and currency always come from the signed Stripe payload. Stripe event IDs are also recorded and claimed before handling, so a retry of the same event is acknowledged without applying the payment twice. If a handler fails, the claim is released so Stripe's automatic retry can process the event again.
+
+## Stripe setup and reliability
+
+The integration uses **Stripe Checkout (Stripe-hosted page)** for one-time payments in a web browser. It does not specify `payment_method_types`, so Dynamic Payment Methods are managed in the Stripe Dashboard. To improve conversion, enable Link and Adaptive Pricing in the Dashboard; Adaptive Pricing is only safe here if the webhook's fixed `usd`/amount check is updated to use the session's presentment currency and amount first.
+
+Local setup:
+
+1. Install the Stripe CLI (`irm https://cli.stripe.com/install.ps1 | iex` on Windows) and run `stripe login`.
+2. Run `stripe listen --forward-to localhost:5000/api/payments/webhook`.
+3. Copy the printed `whsec_...` value into `STRIPE_WEBHOOK_SECRET` in `.env`.
+4. Put a `sk_test_...` key in `STRIPE_SECRET_KEY`. Never put a `pk_`, `rk_`, or `whsec_` value in that field.
+5. Restart `npm run dev` and complete a checkout with Stripe's test card `4242 4242 4242 4242`.
+
+One Stripe Customer is created per local account and reused across checkouts. Each Checkout Session is created with a stable idempotency key, and an open session is reused until Stripe expires it, so double-clicks cannot create duplicate payment links. If a session expires, the next request creates a new one with a new attempt number.
+
+For production, register only these four events on the webhook endpoint: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.expired`, and `checkout.session.async_payment_failed`. Use the signing secret from that exact endpoint and mode. Keep secret and signing keys server-side, rotate exposed keys immediately, and roll webhook secrets periodically.
 
 | Method | Endpoint | Access | Purpose |
 | --- | --- | --- | --- |
 | `GET` | `/api/admin/transactions` | Admin | List transactions, newest first |
 
-Optional transaction filters: `status=paid|failed`, `customerId`, and `appointmentId`. Amounts are returned in the smallest currency unit, such as cents.
+Optional transaction filters: `status=paid|failed`, `customerId`, and `appointmentId`. Amounts are returned in the smallest currency unit, such as cents. Each row also includes `customerInfo` (safe customer details), `serviceInfo` (related service), and `appointmentDate` from the linked booking.
 
 ## Profile and admin user API
 
@@ -270,6 +297,7 @@ Signed-in customers and admins can read and update their own profile. Admin rout
 | `GET` | `/api/users/me` | Signed in, not blocked | Read the current safe profile |
 | `PATCH` | `/api/users/me` | Signed in, not blocked | Update `name`, `phone`, or `image` |
 | `GET` | `/api/admin/users` | Admin | List users with optional filters |
+| `GET` | `/api/admin/users/:id` | Admin | Read one user's safe details |
 | `PATCH` | `/api/admin/users/:id/block` | Admin | Block or unblock another user |
 | `PATCH` | `/api/admin/users/:id/role` | Admin | Promote or demote another user |
 
@@ -294,6 +322,8 @@ The response data contains:
 - `popularServices` — the five most booked services, excluding cancelled appointments
 
 Revenue comes only from transactions recorded by the verified Stripe webhook. Failed transactions are counted but never included in revenue.
+
+Customers can load their own overview numbers from `GET /api/appointments/stats`, which returns `total`, `pending`, `confirmed`, `cancelled`, `paid`, and `unpaid` counts scoped to the signed-in customer.
 
 ## Image uploads API
 
@@ -328,7 +358,7 @@ Success response:
 }
 ```
 
-Sign-up continues to accept an image URL. After login, upload the file first and then save the returned URL as the profile image or admin service image. Invalid files return `400`, a blocked account returns `403 ACCOUNT_BLOCKED`, and an ImgBB failure returns `502` without exposing the key or upstream response body. `IMGBB_API_KEY` must contain a real ImgBB key; an invalid or placeholder value produces the safe `502` response.
+Sign-up continues to accept an image URL. After login, upload the file first and then save the returned URL as the profile image. Admin service creation and updates can either send that URL as JSON or send the file directly as multipart `image` to `POST /api/services` or `PUT /api/services/:id`; the server uploads the file to ImgBB and stores the URL. Invalid files return `400`, a blocked account returns `403 ACCOUNT_BLOCKED`, and an ImgBB failure returns `502` without exposing the key or upstream response body. `IMGBB_API_KEY` must contain a real ImgBB key; an invalid or placeholder value produces the safe `502` response.
 
 ## Admin account
 
@@ -342,13 +372,13 @@ The script creates the account through Better Auth when it is missing and promot
 
 ## Service catalogue seed
 
-Load the 14 starting services across all seven categories:
+Load the 14 starting services across the assignment-aligned categories:
 
 ```bash
 npm run seed:services
 ```
 
-The script reads `seed/services.json`, validates every entry, and upserts by `serviceName`, so running it more than once does not create duplicates. The sample data includes active services in every category and keeps **Hot Stone Massage** inactive so the public and admin filters can be tested.
+The script reads `seed/services.json`, validates every entry, downloads each source image, uploads it through the same server-side ImgBB uploader used by the API, and stores the returned ImgBB URL. It upserts by `serviceName`, so running it more than once does not create duplicates or re-upload images that are already on ImgBB. The sample data includes active services in every category and keeps **Hot Stone Massage** inactive so the public and admin filters can be tested. A valid `IMGBB_API_KEY` and internet access are required for this seed.
 
 ## Required environment variables
 
@@ -360,6 +390,7 @@ MONGODB_URI
 BETTER_AUTH_SECRET
 BETTER_AUTH_URL
 CLIENT_URL
+CLIENT_URLS
 GOOGLE_CLIENT_ID
 GOOGLE_CLIENT_SECRET
 STRIPE_SECRET_KEY
@@ -368,6 +399,8 @@ IMGBB_API_KEY
 ADMIN_EMAIL
 ADMIN_PASSWORD
 ```
+
+`CLIENT_URL` is the primary client origin used for Stripe redirects and documentation. `CLIENT_URLS` is optional and accepts a comma-separated list of additional origins (for example, preview deployments or a `www` alias); all of them are allowed by CORS and Better Auth trusted origins. `STRIPE_SECRET_KEY` accepts a Stripe **secret** key starting with `sk_test_` (or `sk_live_` in production). A publishable `pk_` key, a restricted `rk_` key, or a webhook `whsec_` value will not work here. `STRIPE_WEBHOOK_SECRET` must be the endpoint's `whsec_` signing secret for the same mode as the secret key. `ADMIN_PASSWORD` must satisfy the same six-character, uppercase-and-lowercase rule as customer passwords.
 
 Never commit the real `.env` file. The repository only includes `.env.example` with empty values.
 
@@ -424,6 +457,7 @@ src/
     verifyRole.ts     Role-based route guard
     validate.ts          Zod body, params, and query validation
     upload.ts            Multer memory storage, MIME filter, and upload rate limit
+    resolveServiceImage.ts Converts a service image file into an ImgBB URL
     securityHeaders.ts   Conservative response headers and no-store policy
     errorHandler.ts      Shared 404 and error envelope
   services/
@@ -441,14 +475,41 @@ src/
     seedAdmin.ts      Idempotent admin creation and promotion script
     seedServices.ts   Idempotent service catalogue seed script
 seed/
-  services.json       Fourteen starting services across all seven categories
+  services.json       Fourteen starting services across the assignment-aligned categories
 ```
 
-The full structure will grow as each part of the build is completed.
+## Deployment guideline
 
-## Live site
+1. Create a MongoDB Atlas cluster, allow the hosting provider's IP addresses, and keep the connection string only in the host's environment settings.
+2. Deploy this repository to any Node.js host (Render, Railway, Fly.io, a VPS, etc.) with:
+   - Build command: `npm run build`
+   - Start command: `npm start`
+   - Node.js version: 20 or newer
+   - Health check path: `/api/health`
+3. Set every variable listed under **Required environment variables** in the hosting dashboard. Use the exact public origins:
+   - `BETTER_AUTH_URL` = the public API origin, for example `https://salonbook-api.example.com`
+   - `CLIENT_URL` = the primary Next.js origin, for example `https://salonbook.example.com`
+   - `CLIENT_URLS` = any extra origins such as preview deployments, comma separated
+4. Register `BETTER_AUTH_URL/api/auth/callback/google` as an authorised redirect URI in Google Cloud Console.
+5. In Stripe, register `https://<your-api-origin>/api/payments/webhook` and subscribe to:
+   - `checkout.session.completed`
+   - `checkout.session.async_payment_succeeded`
+   - `checkout.session.expired`
+   - `checkout.session.async_payment_failed`
 
-Server live link: **TBD**
+   Copy that endpoint's signing secret into `STRIPE_WEBHOOK_SECRET`.
+6. Run `npm run seed:admin` and `npm run seed:services` once against the production database, using the same `ADMIN_EMAIL` and `ADMIN_PASSWORD` values configured in the host environment.
+7. Verify the deployment: `GET /api/health` returns success, admin and customer sign-in work, Google login redirects back to the client, an image upload succeeds, and a Stripe test checkout completes with the webhook updating payment status.
+8. Keep `.env` out of the repository. Re-deploy after changing environment variables, and make sure the browser client origin exactly matches `CLIENT_URL` or one of `CLIENT_URLS` to avoid CORS or cookie errors.
+
+## Live site and submission details
+
+- Server live link: **TBD — replace with the deployed API origin before submission**
+- Client live link: **TBD — replace with the deployed Next.js origin before submission**
+- Admin email: **use the `ADMIN_EMAIL` value seeded in the live database**
+- Admin password: **use the `ADMIN_PASSWORD` value seeded in the live database**
+
+Do not paste real credentials into the README. Submit them privately with the assignment.
 
 ## Repositories
 

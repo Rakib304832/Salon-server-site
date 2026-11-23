@@ -1,128 +1,119 @@
 [
   {
-    "serviceName": "Signature Haircut & Styling",
-    "category": "Hair",
-    "description": "A consultation-led haircut with a wash, precision cut, and a polished blow-dry finish.",
-    "price": 35,
-    "duration": 45,
-    "image": "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=800&q=80",
-    "status": "active"
-  },
-  {
-    "serviceName": "Keratin Smoothing Treatment",
-    "category": "Hair",
-    "description": "A salon keratin treatment that reduces frizz and leaves hair smooth, glossy, and easier to style.",
-    "price": 120,
+    "serviceName": "Balayage Highlights",
+    "category": "Hair Coloring",
+    "description": "Hand-painted highlights with a gloss finish and take-home care advice.",
+    "price": 95,
     "duration": 120,
-    "image": "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=800&q=80",
+    "image": "https://i.ibb.co.com/nqJg4QFQ/2db4ae033d93b27a343a41ab8c284448.jpg",
     "status": "active"
   },
   {
-    "serviceName": "Glow Facial",
-    "category": "Facial",
-    "description": "A gentle cleanse, exfoliation, and hydrating mask designed to refresh tired skin and restore glow.",
-    "price": 60,
-    "duration": 60,
-    "image": "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=800&q=80",
-    "status": "active"
-  },
-  {
-    "serviceName": "Hydra Deep Clean Facial",
-    "category": "Facial",
-    "description": "A deep-cleansing facial with steam, extraction, and a calming mask for congested or dull skin.",
-    "price": 85,
-    "duration": 75,
-    "image": "https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?auto=format&fit=crop&w=800&q=80",
-    "status": "active"
-  },
-  {
-    "serviceName": "Relaxing Swedish Massage",
-    "category": "Massage",
-    "description": "A full-body Swedish massage with warm oil and gentle pressure to release tension and improve circulation.",
-    "price": 70,
-    "duration": 60,
-    "image": "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80",
-    "status": "active"
-  },
-  {
-    "serviceName": "Hot Stone Massage",
-    "category": "Massage",
-    "description": "A warming massage using smooth heated stones to relax deep muscle tension throughout the body.",
-    "price": 90,
+    "serviceName": "Deep Tissue Massage",
+    "category": "Spa & Massage",
+    "description": "Firm pressure work targeting chronic muscle tension and poor posture.",
+    "price": 110,
     "duration": 90,
-    "image": "https://images.unsplash.com/photo-1600334129128-685c5582fd35?auto=format&fit=crop&w=800&q=80",
-    "status": "inactive"
+    "image": "https://i.ibb.co.com/XZRg3kNv/images.jpg",
+    "status": "active"
+  },
+  {
+    "serviceName": "Classic Men's Haircut",
+    "category": "Haircut & Styling",
+    "description": "Scissor or clipper cut with a neck shave and styling finish.",
+    "price": 30,
+    "duration": 30,
+    "image": "https://i.ibb.co.com/bMKsGZW6/webp-4e48eddc-1a40-4f82-8521-ac73d5a98222.jpg",
+    "status": "active"
+  },
+  {
+    "serviceName": "Women's Layered Cut",
+    "category": "Haircut & Styling",
+    "description": "Customized layered cut with blow-dry and shaping to suit face shape.",
+    "price": 55,
+    "duration": 60,
+    "image": "https://i.ibb.co.com/DDQ49BCW/images-1.jpg",
+    "status": "active"
+  },
+  {
+    "serviceName": "Full Balayage Color",
+    "category": "Hair Coloring",
+    "description": "Full-head hand-painted color for a soft, sun-kissed dimension.",
+    "price": 150,
+    "duration": 180,
+    "image": "https://i.ibb.co.com/kVMTBSWg/Wella-Pro-Blog-AIO-02.avif",
+    "status": "active"
+  },
+  {
+    "serviceName": "Root Touch-Up",
+    "category": "Hair Coloring",
+    "description": "Color application on new root growth to blend and refresh the base.",
+    "price": 60,
+    "duration": 75,
+    "image": "https://i.ibb.co.com/JwCPVYzk/the-difference-between-a-root-touch-up-amp-a-full-hair-color-18140.webp",
+    "status": "active"
+  },
+  {
+    "serviceName": "Hydrating Facial",
+    "category": "Facial & Skincare",
+    "description": "Deep cleanse, exfoliation, and hydrating mask for dry or dull skin.",
+    "price": 75,
+    "duration": 60,
+    "image": "https://i.ibb.co.com/23Kb12C5/images-2.jpg",
+    "status": "active"
+  },
+  {
+    "serviceName": "Anti-Aging Facial",
+    "category": "Facial & Skincare",
+    "description": "Targeted treatment with serums and massage to firm and smooth fine lines.",
+    "price": 120,
+    "duration": 75,
+    "image": "https://i.ibb.co.com/kgHsBknK/images-3.jpg",
+    "status": "active"
+  },
+  {
+    "serviceName": "Swedish Relaxation Massage",
+    "category": "Spa & Massage",
+    "description": "Gentle, flowing strokes designed to ease stress and promote full-body relaxation.",
+    "price": 85,
+    "duration": 60,
+    "image": "https://i.ibb.co.com/dwkpBsGQ/images-4.jpg",
+    "status": "active"
   },
   {
     "serviceName": "Classic Manicure",
-    "category": "Nails",
-    "description": "A tidy cuticle treatment, nail shaping, hand massage, and a classic polish in your chosen shade.",
-    "price": 25,
-    "duration": 30,
-    "image": "https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=800&q=80",
-    "status": "active"
-  },
-  {
-    "serviceName": "Gel Nail Art",
-    "category": "Nails",
-    "description": "Long-lasting gel colour with a custom nail-art design chosen during your appointment consultation.",
-    "price": 45,
-    "duration": 60,
-    "image": "https://images.unsplash.com/photo-1519014816548-bf5fe059798b?auto=format&fit=crop&w=800&q=80",
-    "status": "active"
-  },
-  {
-    "serviceName": "Soft Glam Makeup",
-    "category": "Makeup",
-    "description": "A natural soft-glam look with skin prep, long-wear base, defined eyes, and a flattering lip finish.",
-    "price": 55,
-    "duration": 60,
-    "image": "https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?auto=format&fit=crop&w=800&q=80",
-    "status": "active"
-  },
-  {
-    "serviceName": "Evening Party Makeup",
-    "category": "Makeup",
-    "description": "A bold evening makeup service with sculpted eyes, lashes, and a statement lip for special events.",
-    "price": 75,
-    "duration": 75,
-    "image": "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=800&q=80",
-    "status": "active"
-  },
-  {
-    "serviceName": "Full Arm Waxing",
-    "category": "Waxing",
-    "description": "Smooth both arms from shoulder to wrist with a warm wax treatment and a soothing after-care lotion.",
-    "price": 30,
-    "duration": 30,
-    "image": "https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?auto=format&fit=crop&w=800&q=80",
-    "status": "active"
-  },
-  {
-    "serviceName": "Full Leg Waxing",
-    "category": "Waxing",
-    "description": "A complete leg wax from thigh to ankle with gentle after-care to leave skin smooth and calm.",
-    "price": 45,
+    "category": "Manicure & Pedicure",
+    "description": "Nail shaping, cuticle care, hand massage, and polish application.",
+    "price": 35,
     "duration": 45,
-    "image": "https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?auto=format&fit=crop&w=800&q=80",
+    "image": "https://i.ibb.co.com/99FCVb4b/images-5.jpg",
     "status": "active"
   },
   {
-    "serviceName": "Bridal Hair & Makeup Package",
+    "serviceName": "Gel Pedicure",
+    "category": "Manicure & Pedicure",
+    "description": "Foot soak, exfoliation, callus removal, and long-lasting gel polish.",
+    "price": 50,
+    "duration": 60,
+    "image": "https://i.ibb.co.com/w8XskLd/images-6.jpg",
+    "status": "inactive"
+  },
+  {
+    "serviceName": "Keratin Smoothing Treatment",
+    "category": "Hair Treatment",
+    "description": "Keratin infusion that reduces frizz and leaves hair smooth for up to three months.",
+    "price": 180,
+    "duration": 150,
+    "image": "https://i.ibb.co.com/qL1JTX8W/images-7.jpg",
+    "status": "active"
+  },
+  {
+    "serviceName": "Bridal Hair & Makeup",
     "category": "Bridal",
-    "description": "A complete wedding-day package with a bridal hairstyle, long-wear makeup, and a final touch-up kit.",
+    "description": "Full bridal look including trial session, hair styling, and makeup application.",
     "price": 250,
     "duration": 180,
-    "image": "https://images.unsplash.com/photo-1594736797933-d0501ba2fe65?auto=format&fit=crop&w=800&q=80",
-    "status": "active"
-  },
-  {
-    "serviceName": "Bridal Trial Session",
-    "category": "Bridal",
-    "description": "A pre-wedding trial to test your bridal hair and makeup look, with adjustments before the big day.",
-    "price": 95,
-    "duration": 90,
-    "image": "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=800&q=80",
+    "image": "https://i.ibb.co.com/Fbk2yPV7/images-8.jpg",
     "status": "active"
   }
 ]

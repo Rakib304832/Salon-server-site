@@ -1,5 +1,5 @@
-// Import the Express router factory.
-import { Router } from "express";
+// Import the Express router factory and request-handler type.
+import { Router, type RequestHandler } from "express";
 
 // Import Zod for the service request schemas.
 import { z } from "zod";
@@ -7,8 +7,12 @@ import { z } from "zod";
 // Import the admin and blocked-account guards.
 import { checkBlocked } from "../middleware/checkBlocked.js";
 import { objectIdSchema, validate } from "../middleware/validate.js";
+import { uploadRateLimit, uploadSingleImage } from "../middleware/upload.js";
 import { verifyAuth } from "../middleware/verifyAuth.js";
 import { verifyRole } from "../middleware/verifyRole.js";
+
+// Import the middleware that turns an uploaded file into an ImgBB URL.
+import { resolveServiceImage } from "../middleware/resolveServiceImage.js";
 
 // Import the service handlers shared by the public and admin routes.
 import {
@@ -50,7 +54,7 @@ const createServiceSchema = z.object({
     .min(2, "Service name must be at least 2 characters")
     .max(100, "Service name cannot exceed 100 characters"),
 
-  // Accept only one of the seven salon categories.
+  // Accept only one of the supported salon categories.
   category: z.enum(SERVICE_CATEGORIES),
 
   // Require a description long enough to be useful on the details page.
@@ -89,6 +93,17 @@ const serviceStatusSchema = z.object({
   status: z.enum(["active", "inactive"]),
 });
 
+// Apply the upload rate limit only when the admin actually sends a file.
+const conditionalUploadRateLimit: RequestHandler = (request, response, next) => {
+  // JSON-only service edits do not consume the image-upload quota.
+  if (request.is("multipart/form-data")) {
+    uploadRateLimit(request, response, next);
+    return;
+  }
+
+  next();
+};
+
 // Create the router mounted at /api/services.
 const servicesRouter = Router();
 
@@ -109,22 +124,28 @@ servicesRouter.get(
   getServiceById,
 );
 
-// Admin create route.
+// Admin create route. Accepts JSON with an image URL or multipart/form-data with an image file.
 servicesRouter.post(
   "/",
   verifyAuth,
   checkBlocked,
   verifyRole("admin"),
+  conditionalUploadRateLimit,
+  uploadSingleImage,
+  resolveServiceImage,
   validate({ body: createServiceSchema }),
   createService,
 );
 
-// Admin full update route.
+// Admin full update route. Accepts JSON with an image URL or multipart/form-data with an image file.
 servicesRouter.put(
   "/:id",
   verifyAuth,
   checkBlocked,
   verifyRole("admin"),
+  conditionalUploadRateLimit,
+  uploadSingleImage,
+  resolveServiceImage,
   validate({ params: serviceIdParamsSchema, body: updateServiceSchema }),
   updateService,
 );

@@ -1,5 +1,5 @@
 // Import Better Auth, which creates the authentication API and session manager.
-import { betterAuth } from "better-auth";
+import { APIError, betterAuth } from "better-auth";
 
 // Import the MongoDB adapter so Better Auth stores its collections in the same database.
 import { mongodbAdapter } from "better-auth/adapters/mongodb";
@@ -7,8 +7,8 @@ import { mongodbAdapter } from "better-auth/adapters/mongodb";
 // Import the JWT plugin so signed-in users can also receive a Bearer token.
 import { jwt } from "better-auth/plugins";
 
-// Import the validated environment values.
-import { env } from "./env.js";
+// Import the validated environment values and the full client-origin allowlist.
+import { env, getClientOrigins } from "./env.js";
 
 // Import the active native MongoDB database object.
 import { getDb } from "./db.js";
@@ -32,8 +32,8 @@ function createAuth() {
       transaction: false,
     }),
 
-    // Trust the Next.js client origin when Better Auth checks cross-origin requests.
-    trustedOrigins: [env.CLIENT_URL],
+    // Trust every configured client origin when Better Auth checks cross-origin requests.
+    trustedOrigins: getClientOrigins(),
 
     // Enable the email and password provider required by the assignment.
     emailAndPassword: {
@@ -107,6 +107,34 @@ function createAuth() {
           // Allow profile updates to provide a phone number.
           input: true,
         },
+      },
+    },
+
+    // Enforce the assignment password rules before Better Auth creates an account.
+    hooks: {
+      before: async (context) => {
+        // Better Auth supplies the endpoint path at runtime; cast to read it safely.
+        const hookContext = context as unknown as { path?: string; body?: unknown };
+
+        // Only the email sign-up route carries a plain-text password.
+        if (hookContext.path !== "/sign-up/email") {
+          return;
+        }
+
+        // Read the submitted password without trusting its type.
+        const password = (hookContext.body as { password?: unknown } | undefined)?.password;
+
+        // Reject passwords that do not contain both letter cases.
+        if (
+          typeof password !== "string" ||
+          !/[A-Z]/.test(password) ||
+          !/[a-z]/.test(password)
+        ) {
+          throw new APIError("BAD_REQUEST", {
+            message: "Password must contain at least one uppercase and one lowercase letter",
+            code: "PASSWORD_RULE_VIOLATION",
+          });
+        }
       },
     },
 

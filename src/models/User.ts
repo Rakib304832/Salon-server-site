@@ -24,6 +24,9 @@ export interface UserInput {
   // Optional contact phone number.
   phone?: string;
 
+  // Stripe Customer ID linked to this account for receipts and payment history.
+  stripeCustomerId?: string;
+
   // Creation time stored by Better Auth.
   createdAt: Date;
 }
@@ -53,6 +56,9 @@ const userSchema = new mongoose.Schema<UserInput>(
 
     // Keep the optional phone number available for future profile responses.
     phone: { type: String },
+
+    // Link one Stripe Customer to this account instead of creating one per checkout.
+    stripeCustomerId: { type: String, trim: true },
 
     // Better Auth records when the account was created.
     createdAt: { type: Date, default: Date.now },

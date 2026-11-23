@@ -14,6 +14,8 @@ import { verifyRole } from "../middleware/verifyRole.js";
 import {
   cancelAppointment,
   createAppointment,
+  getAppointmentById,
+  getMyAppointmentStats,
   listMyAppointments,
 } from "../controllers/appointments.controller.js";
 
@@ -55,6 +57,15 @@ appointmentsRouter.post(
   createAppointment,
 );
 
+// Return dashboard counts for the signed-in customer.
+appointmentsRouter.get(
+  "/stats",
+  verifyAuth,
+  checkBlocked,
+  verifyRole("customer"),
+  getMyAppointmentStats,
+);
+
 // List the signed-in customer's own appointments.
 appointmentsRouter.get(
   "/mine",
@@ -62,6 +73,16 @@ appointmentsRouter.get(
   checkBlocked,
   verifyRole("customer"),
   listMyAppointments,
+);
+
+// Read one of the signed-in customer's own appointments.
+appointmentsRouter.get(
+  "/:id",
+  verifyAuth,
+  checkBlocked,
+  verifyRole("customer"),
+  validate({ params: appointmentIdParamsSchema }),
+  getAppointmentById,
 );
 
 // Cancel one of the signed-in customer's own pending appointments.

@@ -1,12 +1,22 @@
-// List the seven salon categories accepted by the service API.
+// List the salon categories accepted by the service API.
+// The first seven match the assignment examples; Waxing and Bridal keep the seed catalogue usable.
+// The short names below are accepted for compatibility with catalogues that
+// were entered with those values. Without them /api/services?category=Hair is
+// rejected by validation even though such services exist in the database.
 export const SERVICE_CATEGORIES = [
+  "Haircut & Styling",
+  "Hair Coloring",
+  "Hair Treatment",
+  "Facial & Skincare",
+  "Makeup",
+  "Manicure & Pedicure",
+  "Spa & Massage",
+  "Waxing",
+  "Bridal",
   "Hair",
   "Facial",
   "Massage",
   "Nails",
-  "Makeup",
-  "Waxing",
-  "Bridal",
 ] as const;
 
 // Export the union type inferred from the category list.

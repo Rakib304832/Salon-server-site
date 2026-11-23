@@ -7,8 +7,8 @@ import cors from "cors";
 // Import the official Better Auth adapter that converts Node requests into Better Auth requests.
 import { toNodeHandler } from "better-auth/node";
 
-// Import the validated client URL used by the CORS policy.
-import { env } from "./config/env.js";
+// Import the validated environment values and the client-origin allowlist.
+import { env, getClientOrigins } from "./config/env.js";
 
 // Import the database-state helper used by the health route.
 import { isDbConnected } from "./config/db.js";
@@ -67,11 +67,20 @@ app.disable("x-powered-by");
 // Apply conservative security headers before any route writes a response.
 app.use(securityHeaders);
 
-// Allow the Next.js client origin to call the API and include session cookies.
+// Allow every configured Next.js client origin to call the API with session cookies.
 app.use(
   cors({
-    // Allow only the configured client origin, never a wildcard with credentials.
-    origin: env.CLIENT_URL,
+    // Check the browser origin against the allowlist instead of using a wildcard.
+    origin: (origin, callback) => {
+      // Allow server-to-server calls that send no Origin header.
+      if (!origin || getClientOrigins().includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      // Reject any other origin so credentials are never exposed to unknown sites.
+      callback(new Error("Origin not allowed by CORS"));
+    },
 
     // Permit the browser to send and receive Better Auth session cookies.
     credentials: true,

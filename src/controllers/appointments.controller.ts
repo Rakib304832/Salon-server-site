@@ -6,7 +6,10 @@ import mongoose from "mongoose";
 
 // Import the appointment and service models used by the booking rules.
 import { AppointmentModel, type AppointmentInput } from "../models/Appointment.js";
-import { ServiceModel, type ServiceInput } from "../models/Service.js";
+import { ServiceModel } from "../models/Service.js";
+
+// Import the shared service serializer used by every appointment response.
+import { serializeService, type ServiceRecord } from "./services.controller.js";
 
 // Import the shared date and slot rule checks.
 import {
@@ -14,8 +17,8 @@ import {
   assertBookableTimeSlot,
 } from "../services/bookingRules.js";
 
-// Import the shared appointment and service response shapes.
-import type { Appointment, Service } from "../types/models.js";
+// Import the shared appointment, service, and safe user response shapes.
+import type { Appointment, User } from "../types/models.js";
 
 // Import the shared error, async, and response helpers.
 import { ApiError } from "../utils/ApiError.js";
@@ -40,12 +43,12 @@ interface CreateAppointmentBody {
 // Add the MongoDB identifier to a lean appointment document.
 export type AppointmentRecord = AppointmentInput & { _id: mongoose.Types.ObjectId };
 
-// Add the MongoDB identifier to a lean service document.
-export type ServiceRecord = ServiceInput & { _id: mongoose.Types.ObjectId };
+// Re-export the service record type for controllers that build appointment responses.
+export type { ServiceRecord } from "./services.controller.js";
 
 // Build the conflict error used when an active slot is already taken.
 function slotConflictError(): ApiError {
-  return new ApiError(409, "This service already has a booking for that date and time", {
+  return new ApiError(409, "The salon already has a booking for that date and time", {
     code: "SLOT_ALREADY_BOOKED",
     errors: [{ field: "timeSlot", message: "Choose another date or time slot" }],
   });
@@ -72,25 +75,11 @@ function getCustomerId(request: Request): mongoose.Types.ObjectId {
   return new mongoose.Types.ObjectId(request.user.id);
 }
 
-// Convert a stored service document into the shared service response shape.
-function serializeService(service: ServiceRecord): Service {
-  return {
-    _id: service._id.toString(),
-    serviceName: service.serviceName,
-    category: service.category,
-    description: service.description,
-    price: service.price,
-    duration: service.duration,
-    image: service.image,
-    status: service.status,
-    createdAt: new Date(service.createdAt).toISOString(),
-  };
-}
-
 // Convert a stored appointment into the shared response shape.
 export function serializeAppointment(
   appointment: AppointmentRecord,
   service?: ServiceRecord,
+  customer?: User,
 ): Appointment {
   // Copy only public fields into the response.
   const result: Appointment = {
@@ -108,6 +97,11 @@ export function serializeAppointment(
   // Include the optional customer note only when one was saved.
   if (typeof appointment.message === "string" && appointment.message.length > 0) {
     result.message = appointment.message;
+  }
+
+  // Include safe customer information only for callers that explicitly provide it.
+  if (customer) {
+    result.customerInfo = customer;
   }
 
   // Return the complete appointment response.
@@ -143,10 +137,9 @@ export const createAppointment = asyncHandler(async (request, response) => {
     ]);
   }
 
-  // Check the active-slot rule early so a normal duplicate is a controlled 409.
+  // Check the salon-wide active-slot rule early so a normal duplicate is a controlled 409.
   const activeStatuses: AppointmentInput["status"][] = ["pending", "confirmed"];
   const existingBooking = await AppointmentModel.exists({
-    serviceId: service._id,
     appointmentDate: body.appointmentDate,
     timeSlot: body.timeSlot as AppointmentInput["timeSlot"],
     status: { $in: activeStatuses },
@@ -270,5 +263,59 @@ export const cancelAppointment = asyncHandler(async (request, response) => {
       service ?? undefined,
     ),
     "Appointment cancelled successfully",
+  );
+});
+
+// Return dashboard counts for the signed-in customer.
+export const getMyAppointmentStats = asyncHandler(async (request, response) => {
+  // Scope every count to the authenticated customer identifier.
+  const customerId = getCustomerId(request);
+
+  // Run the independent counts together for a single dashboard round trip.
+  const [total, pending, confirmed, cancelled, paid, unpaid] = await Promise.all([
+    AppointmentModel.countDocuments({ customerId }),
+    AppointmentModel.countDocuments({ customerId, status: "pending" }),
+    AppointmentModel.countDocuments({ customerId, status: "confirmed" }),
+    AppointmentModel.countDocuments({ customerId, status: "cancelled" }),
+    AppointmentModel.countDocuments({ customerId, paymentStatus: "paid" }),
+    AppointmentModel.countDocuments({ customerId, paymentStatus: "unpaid" }),
+  ]);
+
+  // Return only server-calculated values inside the success envelope.
+  sendSuccess(
+    response,
+    { total, pending, confirmed, cancelled, paid, unpaid },
+    "Appointment statistics retrieved successfully",
+  );
+});
+
+// Return one of the signed-in customer's own appointments by identifier.
+export const getAppointmentById = asyncHandler(async (request, response) => {
+  // Read the validated identifier and the authenticated customer.
+  const { id } = request.params;
+  const customerId = getCustomerId(request);
+
+  // Include the owner filter so another customer's record stays hidden.
+  const appointment = await AppointmentModel.findOne({ _id: id, customerId }).lean();
+
+  // Return the same 404 for missing and other customers' appointments.
+  if (!appointment) {
+    throw ApiError.notFound("Appointment not found");
+  }
+
+  // Load the referenced service for the detail response.
+  const service = (await ServiceModel.findById(appointment.serviceId).lean()) as
+    | ServiceRecord
+    | null;
+
+  // Return the single appointment inside the success envelope.
+  sendSuccess(
+    response,
+    serializeAppointment(
+      appointment as AppointmentRecord,
+      service ?? undefined,
+      request.user,
+    ),
+    "Appointment retrieved successfully",
   );
 });

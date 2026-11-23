@@ -38,7 +38,7 @@ export interface ServiceBody {
   // Display name of the service.
   serviceName: string;
 
-  // One of the seven salon categories.
+  // One of the supported salon categories.
   category: ServiceCategory;
 
   // Customer-facing description.
@@ -55,7 +55,7 @@ export interface ServiceBody {
 }
 
 // Add the MongoDB identifier to a lean service document.
-type ServiceRecord = ServiceInput & { _id: mongoose.Types.ObjectId };
+export type ServiceRecord = ServiceInput & { _id: mongoose.Types.ObjectId };
 
 // Escape user search input so regex metacharacters are matched literally.
 function escapeRegex(value: string): string {
@@ -63,7 +63,7 @@ function escapeRegex(value: string): string {
 }
 
 // Convert a database document into the public service response shape.
-function serializeService(service: ServiceRecord): Service {
+export function serializeService(service: ServiceRecord): Service {
   return {
     _id: service._id.toString(),
     serviceName: service.serviceName,

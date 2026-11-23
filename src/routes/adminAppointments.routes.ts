@@ -12,6 +12,7 @@ import { verifyRole } from "../middleware/verifyRole.js";
 
 // Import the admin appointment handlers.
 import {
+  getAdminAppointmentById,
   listAllAppointments,
   updateAppointmentStatus,
 } from "../controllers/adminAppointments.controller.js";
@@ -36,7 +37,7 @@ const adminAppointmentQuerySchema = z.object({
   customerId: objectIdSchema.optional(),
 });
 
-// Admins may confirm a pending request or cancel an unpaid one.
+// Admins may confirm a pending request or cancel a pending or confirmed one.
 const appointmentStatusSchema = z.object({
   status: z.enum(["confirmed", "cancelled"]),
 });
@@ -52,6 +53,16 @@ adminAppointmentsRouter.get(
   verifyRole("admin"),
   validate({ query: adminAppointmentQuerySchema }),
   listAllAppointments,
+);
+
+// Return one appointment with service and customer details.
+adminAppointmentsRouter.get(
+  "/:id",
+  verifyAuth,
+  checkBlocked,
+  verifyRole("admin"),
+  validate({ params: appointmentIdParamsSchema }),
+  getAdminAppointmentById,
 );
 
 // Change the lifecycle state of one appointment.
