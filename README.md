@@ -89,8 +89,8 @@ statistics, image uploads, environment validation, and response hardening.
 | --- | --- |
 | Server repository | <https://github.com/Rakib304832/Salon-server-site.git> |
 | Client repository | <https://github.com/Rakib304832/salon-client.git> |
-| Live API deployment | **Pending** — replace this after the final server deployment |
-| Client live deployment | **Pending** — replace after the final client deployment |
+| Live API deployment | <https://salonbook-server-rakib-299e.vercel.app> |
+| Client live deployment | <https://salonbook-client-rakib-299e.vercel.app> |
 
 ---
 
